@@ -1,6 +1,6 @@
 # xnetvn_monitord
 
-**Automated Server Monitoring and Service Recovery for Ubuntu 22 LTS**
+**Automated Server Monitoring and Service Recovery for Linux**
 
 [Vietnamese Documentation](docs/vi/README.md) | [English Documentation](docs/en/README.md)
 
@@ -8,7 +8,7 @@
 
 ## 🎯 Overview
 
-**xnetvn_monitord** is an enterprise-grade monitoring solution designed to automatically track critical services and system resources on Ubuntu 22 LTS servers. When a service fails or resources exceed thresholds, the daemon automatically performs recovery actions and sends notifications via email/Telegram.
+**xnetvn_monitord** is an enterprise-grade monitoring solution designed to automatically track critical services and system resources on modern Linux servers. When a service fails or resources exceed thresholds, the daemon automatically performs recovery actions and sends notifications via email/Telegram.
 
 ### Key Features
 
@@ -125,10 +125,20 @@ sudo systemctl reload xnetvn_monitord
 
 ## 📊 System Requirements
 
-- Ubuntu 22.04 LTS (recommended)
+- Linux distributions: Ubuntu LTS, Debian, CentOS, RHEL, Rocky/Alma, Fedora, Arch,
+  openSUSE/SLES, Alpine
 - Python 3.8+ (3.10+ recommended)
-- Root privileges
+- System privileges to manage services and write logs
 - Network access for notifications
+
+## 🧩 Service Manager Compatibility
+
+- systemd (Ubuntu/Debian/RHEL/CentOS/Rocky/Alma/Fedora/Arch/openSUSE/SLES)
+- OpenRC (Alpine)
+- SysV init (fallback)
+
+You can override auto-detection with the `XNETVN_SERVICE_MANAGER` environment variable
+(`systemd`, `openrc`, or `sysv`).
 
 ---
 

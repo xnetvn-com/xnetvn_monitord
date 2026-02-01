@@ -138,6 +138,15 @@ pytest --cov=xnetvn_monitord --cov-report=xml
 # Test systemctl check
 python debug/test_service_check.py --method systemctl --service-name nginx
 
+# Test auto detection (systemd/OpenRC/SysV)
+python debug/test_service_check.py --method auto --service-name nginx
+
+# Test SysV service check
+python debug/test_service_check.py --method service --service-name nginx
+
+# Test OpenRC service check
+python debug/test_service_check.py --method openrc --service-name nginx
+
 # Test process check
 python debug/test_service_check.py --method process --service-name nginx
 

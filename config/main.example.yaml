@@ -93,8 +93,8 @@ service_monitor:
   # Each entry supports:
   # - name: Friendly display name used in logs/notifications
   # - enabled: Enable/disable the check without removing the entry
-  # - check_method: systemctl | process | process_regex | custom_command | http | https
-  # - service_name: Exact systemd unit name (systemctl only)
+  # - check_method: systemctl | auto | service | openrc | process | process_regex | custom_command | http | https
+  # - service_name: Service unit name (systemctl/auto/service/openrc)
   # - service_name_pattern: Regex to match multiple systemd units (systemctl only)
   # - process_name: Exact process name (process only)
   # - process_pattern/process_patterns: Regex pattern(s) for ps output (process_regex)
@@ -105,12 +105,15 @@ service_monitor:
   # - pre_restart_hook/post_restart_hook: Optional hooks before/after recovery
   # - check_interval/action_cooldown: Per-service overrides for frequency/cooldown
   # - critical/description: Notification metadata
+  # - XNETVN_SERVICE_MANAGER: Optional override for service manager detection
+  #   Values: systemd | openrc | sysv
   services:
     # Example: systemd service by exact unit name
     - name: "nginx"
       # Enable or disable this service check
       enabled: true
-      # Check method: systemctl, process, process_regex, custom_command, http, https
+      # Check method: systemctl, auto, service, openrc, process, process_regex,
+      # custom_command, http, https
       check_method: "systemctl"
       # Exact systemd unit name
       service_name: "nginx"

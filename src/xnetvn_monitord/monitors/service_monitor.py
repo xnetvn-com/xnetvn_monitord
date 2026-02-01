@@ -33,11 +33,18 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from xnetvn_monitord.notifiers import NotificationManager
 
+from xnetvn_monitord.utils.service_manager import ServiceManager
+
 
 class ServiceMonitor:
     """Monitor and manage system services."""
 
-    def __init__(self, config: Dict, notification_manager: Optional["NotificationManager"] = None):
+    def __init__(
+        self,
+        config: Dict,
+        notification_manager: Optional["NotificationManager"] = None,
+        service_manager: Optional[ServiceManager] = None,
+    ):
         """Initialize the service monitor.
 
         Args:
@@ -52,6 +59,7 @@ class ServiceMonitor:
         self.last_check_time: Dict[str, float] = {}
         self._regex_cache: Dict[Tuple[str, ...], List[re.Pattern]] = {}
         self.enabled = config.get("enabled", True)
+        self.service_manager = service_manager or ServiceManager()
 
     def check_all_services(self) -> List[Dict]:
         """Check all configured services.
@@ -134,6 +142,11 @@ class ServiceMonitor:
                 status["message"] = (
                     "Active" if running else "Inactive or failed"
                 )
+
+            elif check_method in ["auto", "service", "openrc"]:
+                running = self._check_service_manager(service_config, check_method)
+                status["running"] = running
+                status["message"] = "Active" if running else "Inactive or failed"
 
             elif check_method == "process":
                 running = self._check_process(service_config)
@@ -264,6 +277,10 @@ class ServiceMonitor:
         Returns:
             True if any matching unit is active, False otherwise.
         """
+        if not self.service_manager.supports_patterns():
+            logger.warning("Service manager does not support unit pattern checks")
+            return False
+
         try:
             result = subprocess.run(
                 ["systemctl", "list-units", "--type=service", "--all", "--no-pager", "--no-legend"],
@@ -304,6 +321,10 @@ class ServiceMonitor:
         if not service_name:
             return False
 
+        if not self.service_manager.is_systemd:
+            running, _, _ = self.service_manager.check_service(service_name)
+            return running
+
         try:
             result = subprocess.run(
                 ["systemctl", "is-active", service_name],
@@ -318,6 +339,32 @@ class ServiceMonitor:
         except Exception as e:
             logger.error(f"Error checking systemctl for {service_name}: {str(e)}")
             return False
+
+    def _check_service_manager(self, service_config: Dict, check_method: str) -> bool:
+        """Check service using the detected service manager.
+
+        Args:
+            service_config: Service configuration dictionary.
+            check_method: Requested check method (auto/service/openrc).
+
+        Returns:
+            True if service is running, False otherwise.
+        """
+        service_name = service_config.get("service_name") or service_config.get("name")
+        if not service_name:
+            return False
+
+        manager_override = None
+        if check_method == "service":
+            manager_override = "sysv"
+        elif check_method == "openrc":
+            manager_override = "openrc"
+
+        running, _, _ = self.service_manager.check_service(
+            service_name,
+            manager_type=manager_override,
+        )
+        return running
 
     def _check_process(self, service_config: Dict) -> bool:
         """Check if a process is running by exact name.
@@ -662,14 +709,17 @@ class ServiceMonitor:
         service_name = service_config.get("service_name")
         service_pattern = service_config.get("service_name_pattern")
 
-        if service_name or service_pattern:
+        if (service_name or service_pattern) and self.service_manager.is_systemd:
             exists, restarting = self._check_systemd_state(service_name, service_pattern)
             if not exists:
                 return False, "Service not found"
             if restarting:
                 return False, "Service is restarting"
 
-        return True, "Action allowed"
+        if self.service_manager.manager_type == "systemd":
+            return True, "Action allowed"
+
+        return True, "Recovery action is ready"
 
     def _check_systemd_state(
         self, service_name: Optional[str], service_pattern: Optional[str]
@@ -856,7 +906,8 @@ class ServiceMonitor:
         service_name = service_config.get("name")
         restart_command = service_config.get("restart_command")
 
-        if not restart_command:
+        resolved_command = self._resolve_restart_command(restart_command, service_config)
+        if not resolved_command:
             logger.error(f"No restart command defined for service: {service_name}")
             return False
 
@@ -868,14 +919,22 @@ class ServiceMonitor:
                 subprocess.run(pre_hook, shell=True, timeout=30)
 
             # Restart the service
-            logger.info(f"Executing restart command for {service_name}: {restart_command}")
-            result = subprocess.run(
-                restart_command,
-                shell=True,
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
+            logger.info(f"Executing restart command for {service_name}: {resolved_command}")
+            if isinstance(resolved_command, list):
+                result = subprocess.run(
+                    resolved_command,
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                )
+            else:
+                result = subprocess.run(
+                    resolved_command,
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                )
 
             # Wait between restart attempts
             wait_time = self.config.get("restart_wait_time", 10)
@@ -897,6 +956,29 @@ class ServiceMonitor:
         except Exception as e:
             logger.error(f"Error restarting service {service_name}: {str(e)}", exc_info=True)
             return False
+
+    def _resolve_restart_command(self, restart_command: Optional[str], service_config: Dict) -> Optional[Any]:
+        """Resolve restart command based on available service manager.
+
+        Args:
+            restart_command: Explicit restart command from configuration.
+            service_config: Service configuration dictionary.
+
+        Returns:
+            Command string or list, or None if not resolvable.
+        """
+        service_name = service_config.get("service_name") or service_config.get("name")
+        if not restart_command:
+            if service_name:
+                return self.service_manager.build_restart_command(service_name)
+            return None
+
+        command_value = restart_command.strip()
+        if command_value.startswith("systemctl") and not self.service_manager.is_systemd:
+            if service_name:
+                return self.service_manager.build_restart_command(service_name)
+
+        return restart_command
 
     def reset_restart_history(self) -> None:
         """Reset all restart history and cooldown trackers."""

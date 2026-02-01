@@ -15,5 +15,6 @@
 """Utilities package initialization."""
 
 from .config_loader import ConfigLoader
+from .service_manager import ServiceManager
 
-__all__ = ["ConfigLoader"]
+__all__ = ["ConfigLoader", "ServiceManager"]

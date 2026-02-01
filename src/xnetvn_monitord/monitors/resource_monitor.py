@@ -26,13 +26,15 @@ from typing import Dict, List, Optional, Tuple
 
 import psutil
 
+from xnetvn_monitord.utils.service_manager import ServiceManager
+
 logger = logging.getLogger(__name__)
 
 
 class ResourceMonitor:
     """Monitor system resources and trigger recovery actions."""
 
-    def __init__(self, config: Dict):
+    def __init__(self, config: Dict, service_manager: Optional[ServiceManager] = None):
         """Initialize the resource monitor.
 
         Args:
@@ -41,6 +43,7 @@ class ResourceMonitor:
         self.config = config
         self.enabled = config.get("enabled", True)
         self.last_action_time: Dict[str, float] = {}
+        self.service_manager = service_manager or ServiceManager()
 
     def check_resources(self) -> Dict:
         """Check all configured resources.
@@ -415,42 +418,26 @@ class ResourceMonitor:
         for service_name in services:
             try:
                 logger.info(f"Restarting service for resource recovery: {service_name}")
-                result = subprocess.run(
-                    ["systemctl", "restart", service_name],
-                    capture_output=True,
-                    text=True,
-                    timeout=60,
-                )
-
+                action_result = self.service_manager.restart_service(service_name)
                 service_result = {
                     "service": service_name,
-                    "success": result.returncode == 0,
-                    "stdout": result.stdout.strip(),
-                    "stderr": result.stderr.strip(),
+                    "success": action_result.get("success", False),
+                    "stdout": action_result.get("stdout", ""),
+                    "stderr": action_result.get("stderr", ""),
                 }
                 results.append(service_result)
 
-                if result.returncode == 0:
+                if action_result.get("success"):
                     logger.info(f"Successfully restarted {service_name}")
                 else:
                     logger.error(
-                        f"Failed to restart {service_name}: {result.stderr}"
+                        f"Failed to restart {service_name}: {service_result['stderr']}"
                     )
 
                 # Wait between restarts
                 if service_name != services[-1]:
                     time.sleep(restart_interval)
 
-            except subprocess.TimeoutExpired:
-                logger.error(f"Timeout restarting service: {service_name}")
-                results.append(
-                    {
-                        "service": service_name,
-                        "success": False,
-                        "stdout": "",
-                        "stderr": "Timeout",
-                    }
-                )
             except Exception as e:
                 logger.error(f"Error restarting {service_name}: {str(e)}")
                 results.append(
