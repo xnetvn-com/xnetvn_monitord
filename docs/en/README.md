@@ -63,7 +63,16 @@ Key sections:
 - `resource_monitor`: CPU/RAM/Disk thresholds and recovery actions
 - `notifications`: Email/Telegram and rate limits
 
-## Environment Variables (systemd)
+## Environment Variables (.env + systemd)
+
+The daemon loads an optional `.env` file from:
+
+```
+/opt/xnetvn_monitord/config/.env
+```
+
+Use `/opt/xnetvn_monitord/config/.env.example` as a template and copy it to
+`.env` without committing secrets.
 
 When using `${VAR}` in `config/main.yaml`, define environment variables via a
 systemd EnvironmentFile:

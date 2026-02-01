@@ -17,7 +17,8 @@
 # xNetVN Monitor Daemon - Installation Script
 # This script installs and configures the xNetVN monitor daemon
 
-set -e
+set -euo pipefail
+IFS=$'\n\t'
 
 # Colors for output
 RED='\033[0;31m'
@@ -109,7 +110,10 @@ copy_files() {
     fi
     
     # Copy configuration
-    if [ -f "$SCRIPT_DIR/config/main.yaml" ]; then
+    if [ -f "$CONFIG_DIR/main.yaml" ]; then
+        log_warning "Configuration file already exists: $CONFIG_DIR/main.yaml"
+        log_warning "Skipping configuration copy to avoid overwriting user changes"
+    elif [ -f "$SCRIPT_DIR/config/main.yaml" ]; then
         cp "$SCRIPT_DIR/config/main.yaml" "$CONFIG_DIR/"
         log_info "Configuration file copied"
     elif [ -f "$SCRIPT_DIR/config/main.example.yaml" ]; then
@@ -119,11 +123,27 @@ copy_files() {
         log_error "No configuration file found"
         exit 1
     fi
+
+    if [ -f "$SCRIPT_DIR/config/.env.example" ]; then
+        if [ -f "$CONFIG_DIR/.env.example" ]; then
+            log_warning "Environment example already exists: $CONFIG_DIR/.env.example"
+        else
+            cp "$SCRIPT_DIR/config/.env.example" "$CONFIG_DIR/.env.example"
+            log_info "Environment example file copied"
+        fi
+    else
+        log_warning "Environment example file not found in repository"
+    fi
     
     # Copy systemd service
     if [ -f "$SCRIPT_DIR/systemd/xnetvn_monitord.service" ]; then
-        cp "$SCRIPT_DIR/systemd/xnetvn_monitord.service" "$SYSTEMD_SERVICE"
-        log_info "Systemd service file copied"
+        if [ -f "$SYSTEMD_SERVICE" ]; then
+            log_warning "Systemd service file already exists: $SYSTEMD_SERVICE"
+            log_warning "Skipping service file copy to avoid overwriting changes"
+        else
+            cp "$SCRIPT_DIR/systemd/xnetvn_monitord.service" "$SYSTEMD_SERVICE"
+            log_info "Systemd service file copied"
+        fi
     else
         log_error "Systemd service file not found"
         exit 1
@@ -157,6 +177,7 @@ show_completion_message() {
     log_info "=================================================="
     echo ""
     log_info "Configuration file: $CONFIG_DIR/main.yaml"
+    log_info "Environment example: $CONFIG_DIR/.env.example"
     log_info "Log directory: $LOG_DIR"
     echo ""
     log_warning "IMPORTANT: Please edit the configuration file before starting the service:"

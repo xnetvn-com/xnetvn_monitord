@@ -69,10 +69,21 @@ sudo systemctl status xnetvn_monitord
 
 ---
 
-## 🔐 Environment Variables (systemd)
+## 🔐 Environment Variables (.env + systemd)
+
+The daemon loads an optional `.env` file from:
+
+```
+/opt/xnetvn_monitord/config/.env
+```
+
+Use `/opt/xnetvn_monitord/config/.env.example` as a template and copy it to
+`.env` without committing secrets.
+
+You can also use systemd `EnvironmentFile` entries when running via systemd:
 
 When using `${VAR}` in `config/main.yaml`, define environment variables via a
-systemd EnvironmentFile (recommended):
+systemd EnvironmentFile:
 
 ```
 /etc/xnetvn_monitord/xnetvn_monitord.env

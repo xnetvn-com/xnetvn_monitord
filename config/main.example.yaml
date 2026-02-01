@@ -60,6 +60,37 @@ general:
   work_dir: "/opt/xnetvn_monitord"
 
 # =============================================================================
+# UPDATE CHECKER CONFIGURATION
+# =============================================================================
+update_checker:
+  # Enable or disable automatic update checks
+  enabled: true
+
+  # Check interval configuration
+  # Supported units: hours, days, weeks
+  interval:
+    value: 1
+    unit: "weeks"
+
+  # Notify through enabled channels when a new version is available
+  notify_on_update: false
+
+  # Automatically update to the latest release (best-effort)
+  auto_update: false
+
+  # GitHub repository for release checks
+  github_repo: "xnetvn-com/xnetvn_monitord"
+
+  # GitHub API base URL
+  github_api_base_url: "https://api.github.com"
+
+  # State file used to store last check time
+  state_file: "/opt/xnetvn_monitord/.local/tmp/update_check.json"
+
+  # Service name used for restart after update
+  service_name: "xnetvn_monitord"
+
+# =============================================================================
 # SERVICE MONITORING CONFIGURATION
 # =============================================================================
 service_monitor:
@@ -359,7 +390,7 @@ service_monitor:
 
     # Example: HTTP/HTTPS web endpoint monitoring
     - name: "web_homepage"
-      enabled: true
+      enabled: false
       check_method: "https"
       # Target URL for health check
       url: "https://example.com/health"
@@ -539,7 +570,7 @@ notifications:
     # Bot token (BotFather)
     bot_token: "${TELEGRAM_BOT_TOKEN}"
     # List of chat IDs to receive alerts
-    chat_ids: []
+    chat_ids: "${TELEGRAM_CHAT_IDS}"
     # Per-channel minimum severity
     min_severity: "info"
     # Include system resource stats in Telegram messages

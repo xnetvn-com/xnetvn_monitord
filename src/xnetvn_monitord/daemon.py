@@ -28,7 +28,7 @@ from typing import Dict, Optional
 
 from .monitors import ResourceMonitor, ServiceMonitor
 from .notifiers import NotificationManager
-from .utils import ConfigLoader
+from .utils import ConfigLoader, UpdateChecker, load_env_file
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +94,9 @@ class MonitorDaemon:
             for channel, result in test_results.items():
                 status = "OK" if result else "FAILED"
                 logger.info(f"  {channel}: {status}")
+
+        # Check for updates if enabled
+        self._maybe_check_for_updates()
 
         # Create PID file
         pid_file = self.config["general"].get("pid_file", "/var/run/xnetvn_monitord.pid")
@@ -386,6 +389,51 @@ class MonitorDaemon:
         except Exception as e:
             logger.error(f"Failed to reload configuration: {str(e)}", exc_info=True)
 
+    def _maybe_check_for_updates(self) -> None:
+        """Check for updates based on configuration."""
+        update_config = self.config.get("update_checker", {})
+        if not update_config.get("enabled", True):
+            logger.info("Update checker is disabled")
+            return
+
+        current_version = self.config.get("general", {}).get("app_version", "0.0.0")
+        work_dir = Path(self.config.get("general", {}).get("work_dir", "/opt/xnetvn_monitord"))
+        checker = UpdateChecker(update_config, current_version, work_dir)
+        result = checker.check_for_updates()
+
+        if not result.checked:
+            logger.debug(result.message)
+            return
+
+        if result.update_available:
+            logger.info(
+                "New version available: %s (current: %s)",
+                result.latest_version,
+                result.current_version,
+            )
+            if update_config.get("notify_on_update", False) and self.notification_manager:
+                message_lines = [
+                    f"Current version: {result.current_version}",
+                    f"Latest version: {result.latest_version}",
+                ]
+                if result.release_url:
+                    message_lines.append(f"Release notes: {result.release_url}")
+                message = "\n".join(message_lines)
+                self.notification_manager.notify_custom_message(
+                    subject="xnetvn_monitord update available",
+                    message=message,
+                )
+
+            if update_config.get("auto_update", False) and result.tarball_url:
+                logger.warning("Auto update is enabled; applying update...")
+                if checker.apply_update(result.tarball_url):
+                    service_name = update_config.get(
+                        "service_name", "xnetvn_monitord"
+                    )
+                    checker.restart_service(service_name)
+        else:
+            logger.info("Update check completed: %s", result.message)
+
     def shutdown(self) -> None:
         """Shutdown the daemon gracefully."""
         logger.info("Shutting down daemon...")
@@ -399,6 +447,8 @@ def main():
     if len(sys.argv) < 2:
         print("Usage: xnetvn_monitord <config_file>")
         sys.exit(1)
+
+    load_env_file("/opt/xnetvn_monitord/config/.env")
 
     config_path = sys.argv[1]
 

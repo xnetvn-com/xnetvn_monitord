@@ -15,6 +15,8 @@
 """Utilities package initialization."""
 
 from .config_loader import ConfigLoader
+from .env_loader import load_env_file
 from .service_manager import ServiceManager
+from .update_checker import UpdateChecker
 
-__all__ = ["ConfigLoader", "ServiceManager"]
+__all__ = ["ConfigLoader", "ServiceManager", "UpdateChecker", "load_env_file"]
