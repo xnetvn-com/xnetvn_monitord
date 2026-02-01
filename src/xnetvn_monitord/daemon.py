@@ -32,6 +32,10 @@ from .utils import ConfigLoader, UpdateChecker, load_env_file
 
 logger = logging.getLogger(__name__)
 
+UPDATE_CONFIG_DOC_URL = (
+    "https://github.com/xnetvn-com/xnetvn_monitord/blob/main/docs/vi/ENVIRONMENT.md"
+)
+
 
 class MonitorDaemon:
     """Main monitoring daemon class."""
@@ -418,6 +422,10 @@ class MonitorDaemon:
                 ]
                 if result.release_url:
                     message_lines.append(f"Release notes: {result.release_url}")
+                message_lines.append(
+                    "Review configuration changes: "
+                    f"{UPDATE_CONFIG_DOC_URL}"
+                )
                 message = "\n".join(message_lines)
                 self.notification_manager.notify_custom_message(
                     subject="xnetvn_monitord update available",

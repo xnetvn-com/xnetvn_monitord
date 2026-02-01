@@ -570,7 +570,10 @@ notifications:
     # Bot token (BotFather)
     bot_token: "${TELEGRAM_BOT_TOKEN}"
     # List of chat IDs to receive alerts
-    chat_ids: "${TELEGRAM_CHAT_IDS}"
+    chat_ids: [
+      "-100XXX",  # Example group chat ID
+      "123456789" # Example individual chat ID
+    ]
     # Per-channel minimum severity
     min_severity: "info"
     # Include system resource stats in Telegram messages
