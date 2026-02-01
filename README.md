@@ -69,6 +69,31 @@ sudo systemctl status xnetvn_monitord
 
 ---
 
+## 🔐 Environment Variables (systemd)
+
+When using `${VAR}` in `config/main.yaml`, define environment variables via a
+systemd EnvironmentFile (recommended):
+
+```
+/etc/xnetvn_monitord/xnetvn_monitord.env
+```
+
+Example entries:
+
+```
+EMAIL_PASSWORD=your_smtp_password
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+```
+
+After updating the file:
+
+```
+sudo systemctl daemon-reload
+sudo systemctl restart xnetvn_monitord
+```
+
+---
+
 ## 🔧 Configuration Example
 
 ```yaml

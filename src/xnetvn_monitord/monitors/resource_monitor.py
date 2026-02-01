@@ -249,8 +249,22 @@ class ResourceMonitor:
         try:
             # Support both 'paths' and 'mount_points' for backward compatibility
             mount_points = config.get("paths", config.get("mount_points", []))
+            normalized_mount_points: List[Dict] = []
+            default_free_percent_threshold = config.get("free_percent_threshold", 10.0)
+            default_free_gb_threshold = config.get("free_gb_threshold", 5.0)
+            default_free_mb_threshold = config.get("free_mb_threshold")
 
             for mp_config in mount_points:
+                if isinstance(mp_config, str):
+                    if mp_config.strip():
+                        normalized_mount_points.append({"path": mp_config})
+                    continue
+                if isinstance(mp_config, dict):
+                    normalized_mount_points.append(mp_config)
+                    continue
+                logger.warning("Invalid mount point configuration: %s", mp_config)
+
+            for mp_config in normalized_mount_points:
                 path = mp_config.get("path")
                 if not path or not os.path.exists(path):
                     continue
@@ -271,8 +285,20 @@ class ResourceMonitor:
                     mp_result["free_percent"] = (usage.free / usage.total) * 100
 
                     # Check thresholds
-                    free_percent_threshold = mp_config.get("free_percent_threshold", 10.0)
-                    free_gb_threshold = mp_config.get("free_gb_threshold", 5.0)
+                    free_percent_threshold = mp_config.get("free_percent_threshold")
+                    if free_percent_threshold is None:
+                        free_percent_threshold = mp_config.get(
+                            "threshold_percent",
+                            default_free_percent_threshold,
+                        )
+                    free_gb_threshold = mp_config.get(
+                        "free_gb_threshold",
+                        default_free_gb_threshold,
+                    )
+                    free_mb_threshold = mp_config.get(
+                        "free_mb_threshold",
+                        default_free_mb_threshold,
+                    )
 
                     if mp_result["free_percent"] < free_percent_threshold:
                         mp_result["threshold_exceeded"] = True
@@ -282,13 +308,23 @@ class ResourceMonitor:
                             f"{mp_result['free_percent']:.2f}% < {free_percent_threshold}%"
                         )
 
-                    if mp_result["free_gb"] < free_gb_threshold:
+                    if free_gb_threshold is not None and mp_result["free_gb"] < free_gb_threshold:
                         mp_result["threshold_exceeded"] = True
                         result["threshold_exceeded"] = True
                         logger.warning(
                             f"Disk space on {path} below threshold: "
                             f"{mp_result['free_gb']:.2f} GB < {free_gb_threshold} GB"
                         )
+
+                    if free_mb_threshold is not None:
+                        free_mb = usage.free / (1024**2)
+                        if free_mb < free_mb_threshold:
+                            mp_result["threshold_exceeded"] = True
+                            result["threshold_exceeded"] = True
+                            logger.warning(
+                                f"Disk space on {path} below threshold: "
+                                f"{free_mb:.2f} MB < {free_mb_threshold} MB"
+                            )
 
                 except Exception as e:
                     logger.error(f"Error checking disk {path}: {str(e)}")

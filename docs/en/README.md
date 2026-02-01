@@ -63,6 +63,29 @@ Key sections:
 - `resource_monitor`: CPU/RAM/Disk thresholds and recovery actions
 - `notifications`: Email/Telegram and rate limits
 
+## Environment Variables (systemd)
+
+When using `${VAR}` in `config/main.yaml`, define environment variables via a
+systemd EnvironmentFile:
+
+```
+/etc/xnetvn_monitord/xnetvn_monitord.env
+```
+
+Example entries:
+
+```
+EMAIL_PASSWORD=your_smtp_password
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+```
+
+After updating the file:
+
+```
+sudo systemctl daemon-reload
+sudo systemctl restart xnetvn_monitord
+```
+
 ## Operations
 
 ```bash

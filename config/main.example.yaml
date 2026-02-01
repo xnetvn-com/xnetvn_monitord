@@ -466,7 +466,7 @@ resource_monitor:
     enabled: false
     # List of mount points to monitor
     mount_points:
-      - "/"
+      - path: "/"
     # Minimum free percent threshold
     free_percent_threshold: 10.0
     # Minimum free MB threshold

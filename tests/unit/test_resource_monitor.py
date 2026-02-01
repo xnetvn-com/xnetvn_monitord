@@ -402,6 +402,30 @@ class TestResourceMonitorDiskCheck:
         assert result["threshold_exceeded"] is False
         assert result["mount_points"][0]["path"] == "/"
 
+    def test_should_support_string_mount_points(self, mocker):
+        """Test disk checks when mount_points is a list of strings."""
+        mock_usage = mocker.MagicMock()
+        mock_usage.total = 100 * 1024 * 1024 * 1024
+        mock_usage.used = 50 * 1024 * 1024 * 1024
+        mock_usage.free = 50 * 1024 * 1024 * 1024
+        mock_usage.percent = 50.0
+        mocker.patch("psutil.disk_usage", return_value=mock_usage)
+        mocker.patch("os.path.exists", return_value=True)
+
+        config = {
+            "enabled": True,
+            "disk": {
+                "enabled": True,
+                "mount_points": ["/"],
+            },
+        }
+
+        monitor = ResourceMonitor(config)
+        result = monitor._check_disk(config["disk"])
+
+        assert result["threshold_exceeded"] is False
+        assert result["mount_points"][0]["path"] == "/"
+
     def test_should_trigger_free_gb_threshold(self, mocker):
         """Test detection of low disk free GB threshold."""
         mock_usage = mocker.MagicMock()

@@ -7,6 +7,7 @@ After=network.target
 Type=simple
 User=root
 Group=root
+EnvironmentFile=-/etc/xnetvn_monitord/xnetvn_monitord.env
 WorkingDirectory=/opt/xnetvn_monitord
 ExecStart=/usr/bin/python3 -m xnetvn_monitord.daemon /opt/xnetvn_monitord/config/main.yaml
 ExecReload=/bin/kill -HUP $MAINPID
