@@ -1,0 +1,581 @@
+# Copyright 2026 xNetVN Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# EXAMPLE CONFIGURATION FILE
+# Copy this file to main.yaml and customize for your environment
+# cp config/main.example.yaml config/main.yaml
+
+# For detailed documentation, see config/main.yaml
+# Sensitive values should be set via environment variables
+
+# =============================================================================
+# GENERAL SETTINGS
+# =============================================================================
+general:
+  # Application name (used in logs and notifications)
+  app_name: "xnetvn_monitord"
+
+  # Application version (informational)
+  app_version: "1.0.0"
+
+  # Monitoring loop interval in seconds
+  # This is the global loop frequency, not the per-service check interval
+  check_interval: 60
+
+  # Logging configuration
+  logging:
+    # Enable or disable logging entirely
+    enabled: true
+
+    # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+    level: "INFO"
+
+    # Log file path (ensure directory is writable)
+    file: "/var/log/xnetvn_monitord/monitor.log"
+
+    # Maximum log file size (MB) before rotation
+    max_size_mb: 100
+
+    # Number of rotated log files to keep
+    backup_count: 10
+
+    # Log format string
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+  # PID file location for daemon
+  pid_file: "/var/run/xnetvn_monitord.pid"
+
+  # Working directory for runtime operations
+  work_dir: "/opt/xnetvn_monitord"
+
+# =============================================================================
+# SERVICE MONITORING CONFIGURATION
+# =============================================================================
+service_monitor:
+  # Enable or disable service monitoring
+  enabled: true
+
+  # Action on failure: restart, restart_and_notify
+  action_on_failure: "restart_and_notify"
+
+  # Default per-service check interval
+  # Supports value+unit: seconds, minutes, hours
+  check_interval:
+    value: 60
+    unit: "seconds"
+
+  # Default action cooldown to avoid too frequent recovery actions
+  action_cooldown:
+    value: 5
+    unit: "minutes"
+
+  # Maximum restart attempts within the window
+  max_restart_attempts: 3
+
+  # Wait time between restart attempts (seconds)
+  restart_wait_time: 10
+
+  # Cooldown after successful restart (seconds)
+  restart_cooldown: 300
+
+  # Services list
+  # Each entry supports:
+  # - name: Friendly display name used in logs/notifications
+  # - enabled: Enable/disable the check without removing the entry
+  # - check_method: systemctl | process | process_regex | custom_command | http | https
+  # - service_name: Exact systemd unit name (systemctl only)
+  # - service_name_pattern: Regex to match multiple systemd units (systemctl only)
+  # - process_name: Exact process name (process only)
+  # - process_pattern/process_patterns: Regex pattern(s) for ps output (process_regex)
+  # - check_command/check_timeout: Custom command and timeout (custom_command only)
+  # - url/http_method/headers/timeout_seconds/expected_status_codes/
+  #   max_response_time_ms/verify_tls: HTTP/HTTPS health checks
+  # - restart_command: Recovery command to execute on failure
+  # - pre_restart_hook/post_restart_hook: Optional hooks before/after recovery
+  # - check_interval/action_cooldown: Per-service overrides for frequency/cooldown
+  # - critical/description: Notification metadata
+  services:
+    # Example: systemd service by exact unit name
+    - name: "nginx"
+      # Enable or disable this service check
+      enabled: true
+      # Check method: systemctl, process, process_regex, custom_command, http, https
+      check_method: "systemctl"
+      # Exact systemd unit name
+      service_name: "nginx"
+      # Optional regex to match multiple systemd units
+      # service_name_pattern: "php.*-fpm\.service"
+      # Restart command to execute when failure detected
+      restart_command: "systemctl restart nginx"
+      # Per-service check interval override
+      check_interval:
+        value: 30
+        unit: "seconds"
+      # Per-service action cooldown override
+      action_cooldown:
+        value: 10
+        unit: "minutes"
+      # Mark as critical for higher severity notifications
+      critical: true
+      # Description shown in notifications
+      description: "Nginx HTTP server"
+      # Optional hooks before and after restart
+      pre_restart_hook: ""
+      post_restart_hook: ""
+
+    # Example: process regex check (matches command line)
+    - name: "php-fpm"
+      enabled: true
+      check_method: "process_regex"
+      process_pattern: "php-fpm.*master"
+      restart_command: "systemctl restart php*-fpm"
+      critical: true
+      description: "PHP-FPM master process"
+
+    # -------------------------------------------------------------------------
+    # Common Ubuntu web server services (disabled by default)
+    # -------------------------------------------------------------------------
+    - name: "apache2"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "apache2"
+      restart_command: "systemctl restart apache2"
+      critical: true
+      description: "Apache HTTP server"
+
+    - name: "mysql"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "mysql"
+      restart_command: "systemctl restart mysql"
+      critical: true
+      description: "MySQL database service"
+
+    - name: "mariadb"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "mariadb"
+      restart_command: "systemctl restart mariadb"
+      critical: true
+      description: "MariaDB database service"
+
+    - name: "postgresql"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "postgresql"
+      restart_command: "systemctl restart postgresql"
+      critical: true
+      description: "PostgreSQL database service"
+
+    - name: "redis"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "redis-server"
+      restart_command: "systemctl restart redis-server"
+      critical: false
+      description: "Redis in-memory data store"
+
+    - name: "memcached"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "memcached"
+      restart_command: "systemctl restart memcached"
+      critical: false
+      description: "Memcached cache service"
+
+    - name: "php-fpm-units"
+      enabled: false
+      check_method: "systemctl"
+      # Match all php-fpm unit variants (php7.x-fpm, php8.x-fpm, ...)
+      service_name_pattern: 'php.*-fpm\.service'
+      restart_command: "systemctl restart php*-fpm"
+      critical: true
+      description: "PHP-FPM systemd units"
+
+    # -------------------------------------------------------------------------
+    # Core infrastructure and security services (disabled by default)
+    # -------------------------------------------------------------------------
+    - name: "ssh"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "ssh"
+      restart_command: "systemctl restart ssh"
+      critical: true
+      description: "OpenSSH server"
+
+    - name: "cron"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "cron"
+      restart_command: "systemctl restart cron"
+      critical: false
+      description: "Cron scheduler"
+
+    - name: "fail2ban"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "fail2ban"
+      restart_command: "systemctl restart fail2ban"
+      critical: true
+      description: "Fail2Ban intrusion prevention"
+
+    - name: "ufw"
+      enabled: false
+      check_method: "custom_command"
+      check_command: "ufw status | grep -q 'Status: active'"
+      check_timeout: 30
+      restart_command: "ufw reload"
+      critical: true
+      description: "Uncomplicated Firewall"
+
+    - name: "docker"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "docker"
+      restart_command: "systemctl restart docker"
+      critical: false
+      description: "Docker engine"
+
+    # -------------------------------------------------------------------------
+    # Mail, DNS, and anti-malware services (HestiaCP stack)
+    # -------------------------------------------------------------------------
+    - name: "exim4"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "exim4"
+      restart_command: "systemctl restart exim4"
+      critical: true
+      description: "Exim4 mail transport"
+
+    - name: "postfix"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "postfix"
+      restart_command: "systemctl restart postfix"
+      critical: true
+      description: "Postfix mail transport"
+
+    - name: "dovecot"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "dovecot"
+      restart_command: "systemctl restart dovecot"
+      critical: true
+      description: "Dovecot IMAP/POP3 server"
+
+    - name: "spamassassin"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "spamassassin"
+      restart_command: "systemctl restart spamassassin"
+      critical: false
+      description: "SpamAssassin daemon"
+
+    - name: "spamd"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "spamd"
+      restart_command: "systemctl restart spamd"
+      critical: false
+      description: "SpamAssassin spamd service"
+
+    - name: "clamav-daemon"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "clamav-daemon"
+      restart_command: "systemctl restart clamav-daemon"
+      critical: false
+      description: "ClamAV antivirus daemon"
+
+    - name: "clamav-freshclam"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "clamav-freshclam"
+      restart_command: "systemctl restart clamav-freshclam"
+      critical: false
+      description: "ClamAV signature updater"
+
+    - name: "bind9"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "bind9"
+      restart_command: "systemctl restart bind9"
+      critical: true
+      description: "BIND9 DNS server"
+
+    - name: "named"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "named"
+      restart_command: "systemctl restart named"
+      critical: true
+      description: "Named DNS server"
+
+    - name: "vsftpd"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "vsftpd"
+      restart_command: "systemctl restart vsftpd"
+      critical: false
+      description: "VSFTPD FTP server"
+
+    - name: "proftpd"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "proftpd"
+      restart_command: "systemctl restart proftpd"
+      critical: false
+      description: "ProFTPD FTP server"
+
+    - name: "pure-ftpd"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "pure-ftpd"
+      restart_command: "systemctl restart pure-ftpd"
+      critical: false
+      description: "Pure-FTPd FTP server"
+
+    - name: "hestia"
+      enabled: false
+      check_method: "systemctl"
+      service_name: "hestia"
+      restart_command: "systemctl restart hestia"
+      critical: true
+      description: "HestiaCP control panel service"
+
+    # Example: HTTP/HTTPS web endpoint monitoring
+    - name: "web_homepage"
+      enabled: true
+      check_method: "https"
+      # Target URL for health check
+      url: "https://example.com/health"
+      # HTTP method: GET, HEAD, POST, ...
+      http_method: "GET"
+      # Optional request headers
+      headers:
+        User-Agent: "xnetvn_monitord"
+      # Timeout for HTTP request (seconds)
+      timeout_seconds: 10
+      # Expected HTTP status codes
+      expected_status_codes: [200, 204, 301, 302]
+      # Fail if response is slower than this threshold (ms)
+      max_response_time_ms: 1500
+      # Verify TLS certificates (https only)
+      verify_tls: true
+      # Optional recovery action (e.g., restart nginx)
+      restart_command: "systemctl restart nginx"
+      # Optional: check systemd unit existence before action
+      service_name: "nginx"
+      critical: true
+      description: "Public web health check"
+
+    # -------------------------------------------------------------------------
+    # Local web endpoints (disabled by default)
+    # -------------------------------------------------------------------------
+    - name: "localhost_http"
+      enabled: false
+      check_method: "http"
+      url: "http://127.0.0.1/"
+      http_method: "GET"
+      timeout_seconds: 5
+      expected_status_codes: [200, 204, 301, 302]
+      max_response_time_ms: 1000
+      restart_command: "systemctl restart nginx"
+      service_name: "nginx"
+      critical: false
+      description: "Local HTTP health check"
+
+    - name: "localhost_https"
+      enabled: false
+      check_method: "https"
+      url: "https://127.0.0.1/"
+      http_method: "GET"
+      timeout_seconds: 5
+      expected_status_codes: [200, 204, 301, 302]
+      max_response_time_ms: 1500
+      verify_tls: false
+      restart_command: "systemctl restart nginx"
+      service_name: "nginx"
+      critical: false
+      description: "Local HTTPS health check (self-signed)"
+
+    - name: "hestia_panel"
+      enabled: false
+      check_method: "https"
+      url: "https://127.0.0.1:8083/"
+      http_method: "GET"
+      timeout_seconds: 5
+      expected_status_codes: [200, 301, 302, 401]
+      max_response_time_ms: 2000
+      verify_tls: false
+      restart_command: "systemctl restart hestia"
+      service_name: "hestia"
+      critical: true
+      description: "HestiaCP panel health check"
+
+# =============================================================================
+# RESOURCE MONITORING CONFIGURATION
+# =============================================================================
+resource_monitor:
+  # Enable or disable resource monitoring
+  enabled: true
+
+  # Action when thresholds exceeded: restart_services, notify, both
+  action_on_threshold: "both"
+
+  # CPU load monitoring
+  cpu_load:
+    enabled: true
+    # Enable checks for specific load averages
+    check_1min: true
+    check_5min: false
+    check_15min: false
+    # Thresholds for each check
+    threshold_1min: 99.0
+    threshold_5min: 80.0
+    threshold_15min: 60.0
+
+  # Memory monitoring
+  memory:
+    enabled: true
+    # Trigger condition: "or" or "and"
+    condition: "or"
+    # Minimum free memory percent
+    free_percent_threshold: 5.0
+    # Minimum free memory MB
+    free_mb_threshold: 512
+    # Actions when threshold exceeded
+    action_on_threshold: "notify"
+
+  # Disk monitoring
+  disk:
+    enabled: false
+    # List of mount points to monitor
+    mount_points:
+      - "/"
+    # Minimum free percent threshold
+    free_percent_threshold: 10.0
+    # Minimum free MB threshold
+    free_mb_threshold: 1024
+    # Action on low disk: notify, cleanup, both
+    action_on_threshold: "notify"
+
+# =============================================================================
+# NOTIFICATIONS CONFIGURATION
+# =============================================================================
+notifications:
+  # Enable or disable notifications globally
+  enabled: true
+
+  # Minimum severity to send notifications
+  # debug, info, low, medium, high, critical
+  min_severity: "info"
+
+  # Rate limiting configuration (per event type)
+  rate_limit:
+    enabled: true
+    # Minimum interval between notifications (seconds)
+    min_interval: 300
+    # Maximum notifications per hour
+    max_per_hour: 20
+
+  # Sensitive content filter configuration
+  content_filter:
+    enabled: true
+    # List of regex patterns to mask in notification content
+    patterns:
+      - "(?i)password=\\S+"
+      - "(?i)token=\\S+"
+    # Replacement string
+    replacement: "[REDACTED]"
+
+  # Email notifications
+  email:
+    # Enable email notifications
+    enabled: false
+    smtp:
+      # SMTP server hostname or IP
+      host: "smtp.example.com"
+      # SMTP port (usually 587 for STARTTLS)
+      port: 587
+      # Enable TLS/STARTTLS
+      use_tls: true
+      # SMTP username
+      username: "monitor@example.com"
+      # SMTP password (use environment variable in production)
+      password: "${EMAIL_PASSWORD}"
+      # From address used in outgoing emails
+      from_address: "monitor@example.com"
+      # List of recipient addresses
+      to_addresses:
+        - "ops@example.com"
+    # Per-channel minimum severity
+    min_severity: "info"
+    # Include system resource stats in email body
+    include_system_stats: true
+    # Include recovery action details in email body
+    include_action_details: true
+    # Include detailed event payload
+    include_details: true
+
+  # Telegram notifications
+  telegram:
+    # Enable Telegram notifications
+    enabled: false
+    # Bot token (BotFather)
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    # List of chat IDs to receive alerts
+    chat_ids: []
+    # Per-channel minimum severity
+    min_severity: "info"
+    # Include system resource stats in Telegram messages
+    include_system_stats: false
+    # Include recovery action details in Telegram messages
+    include_action_details: true
+    # Include detailed event payload
+    include_details: true
+
+  # Slack notifications
+  slack:
+    # Enable Slack notifications
+    enabled: false
+    # Incoming webhook URL
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+    # Default channel for messages
+    channel: "#server-alerts"
+    # Bot display name
+    username: "xNetVN Monitor"
+    # Per-channel minimum severity
+    min_severity: "medium"
+
+  # Discord notifications
+  discord:
+    # Enable Discord notifications
+    enabled: false
+    # Discord webhook URL
+    webhook_url: "${DISCORD_WEBHOOK_URL}"
+    # Bot display name
+    username: "xNetVN Monitor"
+    # Per-channel minimum severity
+    min_severity: "medium"
+
+  # Webhook notifications
+  webhook:
+    # Enable generic webhook notifications
+    enabled: false
+    # List of webhook URLs
+    urls:
+      - "${WEBHOOK_URL}"
+    # Per-channel minimum severity
+    min_severity: "info"
