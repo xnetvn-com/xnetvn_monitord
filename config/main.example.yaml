@@ -18,6 +18,7 @@
 
 # For detailed documentation, see config/main.yaml
 # Sensitive values should be set via environment variables
+# Environment file loaded by default: /opt/xnetvn_monitord/config/.env
 
 # =============================================================================
 # GENERAL SETTINGS
@@ -84,6 +85,9 @@ update_checker:
   # GitHub API base URL
   github_api_base_url: "https://api.github.com"
 
+  # Optional GitHub token to avoid rate limits
+  # Set via environment variable: GITHUB_TOKEN
+
   # State file used to store last check time
   state_file: "/opt/xnetvn_monitord/.local/tmp/update_check.json"
 
@@ -124,15 +128,19 @@ service_monitor:
   # Each entry supports:
   # - name: Friendly display name used in logs/notifications
   # - enabled: Enable/disable the check without removing the entry
-  # - check_method: systemctl | auto | service | openrc | process | process_regex | custom_command | http | https
+  # - check_method: systemctl | auto | service | openrc | process | process_regex
+  #   | custom_command | http | https
   # - service_name: Service unit name (systemctl/auto/service/openrc)
   # - service_name_pattern: Regex to match multiple systemd units (systemctl only)
   # - process_name: Exact process name (process only)
   # - process_pattern/process_patterns: Regex pattern(s) for ps output (process_regex)
+  # - multi_instance: Enable multi-instance checks (process_regex only)
+  # - instances: List of instance definitions when multi_instance is true
+  #   - service_name: systemd unit name for each instance
   # - check_command/check_timeout: Custom command and timeout (custom_command only)
   # - url/http_method/headers/timeout_seconds/expected_status_codes/
   #   max_response_time_ms/verify_tls: HTTP/HTTPS health checks
-  # - restart_command: Recovery command to execute on failure
+  # - restart_command: Recovery command to execute on failure.
   #   Supports a single command string or a list of commands executed in order.
   #   External scripts are supported (bash/php/python, etc.).
   # - pre_restart_hook/post_restart_hook: Optional hooks before/after recovery
@@ -144,7 +152,7 @@ service_monitor:
     # Example: systemd service by exact unit name
     - name: "nginx"
       # Enable or disable this service check
-      enabled: true
+      enabled: false
       # Check method: systemctl, auto, service, openrc, process, process_regex,
       # custom_command, http, https
       check_method: "systemctl"
@@ -152,12 +160,11 @@ service_monitor:
       service_name: "nginx"
       # Optional regex to match multiple systemd units
       # service_name_pattern: "php.*-fpm\.service"
-      # Restart command to execute when failure detected
       # Example: execute multiple commands in order
       restart_command:
         - "systemctl restart nginx"
         #- "systemctl restart php*-fpm"
-        #- "bash /opt/xnetvn_monitord/scripts/custom-restart.sh"
+        #- "bash /opt/xnetvn_monitord/scripts/custom-restart.sh" # Custom script
       # Per-service check interval override
       check_interval:
         value: 30
@@ -176,7 +183,7 @@ service_monitor:
 
     # Example: process regex check (matches command line)
     - name: "php-fpm"
-      enabled: true
+      enabled: false
       check_method: "process_regex"
       process_pattern: "php-fpm.*master"
       restart_command:
@@ -415,7 +422,13 @@ service_monitor:
       # Verify TLS certificates (https only)
       verify_tls: true
       # Optional recovery action (e.g., restart nginx)
-      restart_command: "systemctl restart nginx"
+      restart_command: 
+        - "systemctl restart php*-fpm"
+        - "systemctl restart nginx"
+        #- "systemctl restart mariadb" # Additional command
+        #- "bash /path/to/scripts/custom-restart.sh" # Custom script
+        #- "python /path/to/scripts/custom-restart.py"
+
       # Optional: check systemd unit existence before action
       service_name: "nginx"
       critical: true
@@ -486,6 +499,8 @@ resource_monitor:
     threshold_1min: 99.0
     threshold_5min: 80.0
     threshold_15min: 60.0
+    # Optional recovery command executed when threshold is exceeded
+    # recovery_command: "systemctl restart nginx"
 
   # Memory monitoring
   memory:
@@ -497,20 +512,45 @@ resource_monitor:
     # Minimum free memory MB
     free_mb_threshold: 512
     # Actions when threshold exceeded
-    action_on_threshold: "notify"
+    action_on_threshold: "both"
 
   # Disk monitoring
   disk:
     enabled: false
+    # Backward compatible key: paths (same as mount_points)
     # List of mount points to monitor
+    # Supports per-mount overrides for thresholds
     mount_points:
       - path: "/"
+        # Optional per-mount overrides
+        # free_percent_threshold: 10.0
+        # free_gb_threshold: 5.0
+        # free_mb_threshold: 1024
     # Minimum free percent threshold
     free_percent_threshold: 10.0
+    # Minimum free space in GB (optional)
+    free_gb_threshold: 5.0
     # Minimum free MB threshold
     free_mb_threshold: 1024
     # Action on low disk: notify, cleanup, both
     action_on_threshold: "notify"
+
+  # Resource recovery actions
+  recovery_actions:
+    # Cooldown between recovery actions (seconds)
+    cooldown_period: 1800
+    # Delay between restarting each service (seconds)
+    restart_interval: 5
+    # Services to restart on high CPU load
+    high_cpu_services:
+      - "nginx"
+      - "php8.2-fpm"
+    # Services to restart on low memory
+    low_memory_services:
+      - "redis-server"
+    # Services to restart on low disk space
+    low_disk_services:
+      - "mysql"
 
 # =============================================================================
 # NOTIFICATIONS CONFIGURATION
@@ -535,16 +575,31 @@ notifications:
   content_filter:
     enabled: true
     # List of regex patterns to mask in notification content
-    patterns:
+    redact_patterns:
       - "(?i)password=\\S+"
       - "(?i)token=\\S+"
     # Replacement string
-    replacement: "[REDACTED]"
+    redact_replacement: "[REDACTED]"
 
   # Email notifications
   email:
     # Enable email notifications
     enabled: false
+    # From address used in outgoing emails
+    from_address: "monitor@example.com"
+    # From display name
+    from_name: "xNetVN Monitor"
+    # List of recipient addresses
+    to_addresses:
+      - "ops@example.com"
+    # Subject prefix for outgoing emails
+    subject_prefix: "[xNetVN Monitor]"
+    # Include hostname in email subject
+    include_hostname: true
+    # Email template configuration
+    template:
+      # Format: plain | html
+      format: "plain"
     smtp:
       # SMTP server hostname or IP
       host: "smtp.example.com"
@@ -552,17 +607,21 @@ notifications:
       port: 587
       # Enable TLS/STARTTLS
       use_tls: true
+      # Enable SSL (alternative to STARTTLS)
+      use_ssl: false
       # SMTP username
       username: "monitor@example.com"
       # SMTP password (use environment variable in production)
       password: "${EMAIL_PASSWORD}"
-      # From address used in outgoing emails
-      from_address: "monitor@example.com"
-      # List of recipient addresses
-      to_addresses:
-        - "ops@example.com"
+      # SMTP connection timeout (seconds)
+      timeout: 30
     # Per-channel minimum severity
     min_severity: "info"
+    # Optional rate limit override for email
+    # rate_limit:
+    #   enabled: true
+    #   min_interval: 300
+    #   max_per_hour: 20
     # Include system resource stats in email body
     include_system_stats: true
     # Include recovery action details in email body
@@ -577,12 +636,23 @@ notifications:
     # Bot token (BotFather)
     bot_token: "${TELEGRAM_BOT_TOKEN}"
     # List of chat IDs to receive alerts
-    chat_ids: [
-      "-100XXX",  # Example group chat ID
-      "123456789" # Example individual chat ID
-    ]
+    chat_ids:
+      - "${TELEGRAM_CHAT_ID_1}"
+      # - "-100XXXX"  # Example group chat ID
+      # - "123456789" # Example individual chat ID
+    # Parse mode: HTML | Markdown
+    parse_mode: "HTML"
+    # Disable link previews
+    disable_preview: true
+    # Telegram API timeout (seconds)
+    timeout: 30
     # Per-channel minimum severity
     min_severity: "info"
+    # Optional rate limit override for Telegram
+    # rate_limit:
+    #   enabled: true
+    #   min_interval: 300
+    #   max_per_hour: 20
     # Include system resource stats in Telegram messages
     include_system_stats: false
     # Include recovery action details in Telegram messages
@@ -600,8 +670,22 @@ notifications:
     channel: "#server-alerts"
     # Bot display name
     username: "xNetVN Monitor"
+    # Optional icon emoji or icon URL
+    icon_emoji: ":satellite:"
+    # icon_url: "https://example.com/icon.png"
+    # Verify SSL certificates
+    verify_ssl: true
+    # Slack API timeout (seconds)
+    timeout: 30
+    # Send test notification on startup
+    test_on_startup: false
     # Per-channel minimum severity
     min_severity: "medium"
+    # Optional rate limit override for Slack
+    # rate_limit:
+    #   enabled: true
+    #   min_interval: 300
+    #   max_per_hour: 20
 
   # Discord notifications
   discord:
@@ -611,15 +695,44 @@ notifications:
     webhook_url: "${DISCORD_WEBHOOK_URL}"
     # Bot display name
     username: "xNetVN Monitor"
+    # Optional avatar URL
+    # avatar_url: "https://example.com/avatar.png"
+    # Verify SSL certificates
+    verify_ssl: true
+    # Discord API timeout (seconds)
+    timeout: 30
+    # Send test notification on startup
+    test_on_startup: false
     # Per-channel minimum severity
     min_severity: "medium"
+    # Optional rate limit override for Discord
+    # rate_limit:
+    #   enabled: true
+    #   min_interval: 300
+    #   max_per_hour: 20
 
   # Webhook notifications
   webhook:
     # Enable generic webhook notifications
     enabled: false
+    # Single webhook URL (use urls for multiple endpoints)
+    # url: "${WEBHOOK_URL}"
     # List of webhook URLs
     urls:
-      - "${WEBHOOK_URL}"
+      - "${WEBHOOK_URL_1}"
+    # Optional custom headers
+    headers:
+      X-Source: "xnetvn_monitord"
+    # Verify SSL certificates
+    verify_ssl: true
+    # Webhook timeout (seconds)
+    timeout: 30
+    # Send test notification on startup
+    test_on_startup: false
     # Per-channel minimum severity
     min_severity: "info"
+    # Optional rate limit override for webhook
+    # rate_limit:
+    #   enabled: true
+    #   min_interval: 300
+    #   max_per_hour: 20
