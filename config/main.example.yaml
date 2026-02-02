@@ -140,7 +140,9 @@ service_monitor:
   # - check_command/check_timeout: Custom command and timeout (custom_command only)
   # - url/http_method/headers/timeout_seconds/expected_status_codes/
   #   max_response_time_ms/verify_tls: HTTP/HTTPS health checks
-  # - restart_command: Recovery command (string or list executed in order)
+  # - restart_command: Recovery command to execute on failure.
+  #   Supports a single command string or a list of commands executed in order.
+  #   External scripts are supported (bash/php/python, etc.).
   # - pre_restart_hook/post_restart_hook: Optional hooks before/after recovery
   # - check_interval/action_cooldown: Per-service overrides for frequency/cooldown
   # - critical/description: Notification metadata
@@ -158,10 +160,11 @@ service_monitor:
       service_name: "nginx"
       # Optional regex to match multiple systemd units
       # service_name_pattern: "php.*-fpm\.service"
-      # Restart command to execute when failure detected
-      restart_command: 
+      # Example: execute multiple commands in order
+      restart_command:
         - "systemctl restart nginx"
-        #- "bash /path/to/scripts/custom-restart.sh" # Custom script
+        #- "systemctl restart php*-fpm"
+        #- "bash /opt/xnetvn_monitord/scripts/custom-restart.sh" # Custom script
       # Per-service check interval override
       check_interval:
         value: 30
@@ -183,7 +186,8 @@ service_monitor:
       enabled: false
       check_method: "process_regex"
       process_pattern: "php-fpm.*master"
-      restart_command: "systemctl restart php*-fpm"
+      restart_command:
+        - "systemctl restart php*-fpm"
       critical: true
       description: "PHP-FPM master process"
 

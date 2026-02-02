@@ -124,13 +124,16 @@ copy_files() {
         exit 1
     fi
 
+    if [ -f "$SCRIPT_DIR/config/main.example.yaml" ]; then
+        cp "$SCRIPT_DIR/config/main.example.yaml" "$CONFIG_DIR/main.example.yaml"
+        log_info "Configuration example file refreshed"
+    else
+        log_warning "Configuration example file not found in repository"
+    fi
+
     if [ -f "$SCRIPT_DIR/config/.env.example" ]; then
-        if [ -f "$CONFIG_DIR/.env.example" ]; then
-            log_warning "Environment example already exists: $CONFIG_DIR/.env.example"
-        else
-            cp "$SCRIPT_DIR/config/.env.example" "$CONFIG_DIR/.env.example"
-            log_info "Environment example file copied"
-        fi
+        cp "$SCRIPT_DIR/config/.env.example" "$CONFIG_DIR/.env.example"
+        log_info "Environment example file refreshed"
     else
         log_warning "Environment example file not found in repository"
     fi

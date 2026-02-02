@@ -344,7 +344,8 @@ class UpdateChecker:
                     logger.error("No extracted release directory found")
                     return False
 
-                source_dir = extracted_dirs[0] / "src" / "xnetvn_monitord"
+                release_root = extracted_dirs[0]
+                source_dir = release_root / "src" / "xnetvn_monitord"
                 if not source_dir.exists():
                     logger.error("Release source directory not found: %s", source_dir)
                     return False
@@ -361,6 +362,24 @@ class UpdateChecker:
 
                 shutil.rmtree(target_dir)
                 shutil.copytree(source_dir, target_dir)
+
+                config_dir = self.install_dir / "config"
+                config_dir.mkdir(parents=True, exist_ok=True)
+                release_config_dir = release_root / "config"
+                if release_config_dir.exists():
+                    example_config = release_config_dir / "main.example.yaml"
+                    if example_config.exists():
+                        shutil.copy2(example_config, config_dir / "main.example.yaml")
+                    else:
+                        logger.warning("Release missing main.example.yaml")
+
+                    env_example = release_config_dir / ".env.example"
+                    if env_example.exists():
+                        shutil.copy2(env_example, config_dir / ".env.example")
+                    else:
+                        logger.warning("Release missing .env.example")
+                else:
+                    logger.warning("Release missing config directory")
         except Exception as exc:
             logger.error("Failed to apply update: %s", exc)
             return False
