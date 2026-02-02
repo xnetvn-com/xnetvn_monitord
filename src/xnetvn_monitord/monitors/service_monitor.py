@@ -919,15 +919,32 @@ class ServiceMonitor:
                 subprocess.run(pre_hook, shell=True, timeout=30)
 
             # Restart the service
-            logger.info(f"Executing restart command for {service_name}: {resolved_command}")
             if isinstance(resolved_command, list):
-                result = subprocess.run(
-                    resolved_command,
-                    capture_output=True,
-                    text=True,
-                    timeout=60,
-                )
+                for command in resolved_command:
+                    logger.info(
+                        "Executing restart command for %s: %s",
+                        service_name,
+                        command,
+                    )
+                    result = subprocess.run(
+                        command,
+                        shell=True,
+                        capture_output=True,
+                        text=True,
+                        timeout=60,
+                    )
+                    if result.returncode != 0:
+                        logger.warning(
+                            "Restart command returned non-zero for %s: %s",
+                            service_name,
+                            (result.stderr or result.stdout or "").strip(),
+                        )
             else:
+                logger.info(
+                    "Executing restart command for %s: %s",
+                    service_name,
+                    resolved_command,
+                )
                 result = subprocess.run(
                     resolved_command,
                     shell=True,
@@ -957,7 +974,7 @@ class ServiceMonitor:
             logger.error(f"Error restarting service {service_name}: {str(e)}", exc_info=True)
             return False
 
-    def _resolve_restart_command(self, restart_command: Optional[str], service_config: Dict) -> Optional[Any]:
+    def _resolve_restart_command(self, restart_command: Optional[Any], service_config: Dict) -> Optional[Any]:
         """Resolve restart command based on available service manager.
 
         Args:
@@ -965,7 +982,7 @@ class ServiceMonitor:
             service_config: Service configuration dictionary.
 
         Returns:
-            Command string or list, or None if not resolvable.
+            Command string, list of commands, or None if not resolvable.
         """
         service_name = service_config.get("service_name") or service_config.get("name")
         if not restart_command:
@@ -973,12 +990,37 @@ class ServiceMonitor:
                 return self.service_manager.build_restart_command(service_name)
             return None
 
-        command_value = restart_command.strip()
-        if command_value.startswith("systemctl") and not self.service_manager.is_systemd:
-            if service_name:
-                return self.service_manager.build_restart_command(service_name)
+        if isinstance(restart_command, list):
+            normalized_commands = [
+                str(command).strip()
+                for command in restart_command
+                if str(command).strip()
+            ]
+            if not normalized_commands:
+                if service_name:
+                    return self.service_manager.build_restart_command(service_name)
+                return None
+            return normalized_commands
 
-        return restart_command
+        if isinstance(restart_command, str):
+            command_value = restart_command.strip()
+            if not command_value:
+                if service_name:
+                    return self.service_manager.build_restart_command(service_name)
+                return None
+            if command_value.startswith("systemctl") and not self.service_manager.is_systemd:
+                if service_name:
+                    return self.service_manager.build_restart_command(service_name)
+            return command_value
+
+        logger.warning(
+            "Unsupported restart_command type for %s: %s",
+            service_name,
+            type(restart_command).__name__,
+        )
+        if service_name:
+            return self.service_manager.build_restart_command(service_name)
+        return None
 
     def reset_restart_history(self) -> None:
         """Reset all restart history and cooldown trackers."""

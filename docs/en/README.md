@@ -11,6 +11,7 @@
 ## Key Features
 
 - Service monitoring (systemd/OpenRC/SysV/process/regex/custom/HTTP/HTTPS).
+- Sequential restart commands via list-based `restart_command`.
 - Per-service check intervals and action cooldowns.
 - Pre- and post-recovery notifications.
 - CPU/RAM/Disk threshold monitoring.
@@ -63,6 +64,17 @@ Key sections:
 - `resource_monitor`: CPU/RAM/Disk thresholds and recovery actions
 - `notifications`: Email/Telegram and rate limits
 
+Example restart command list:
+
+```yaml
+service_monitor:
+    services:
+        - name: "nginx"
+            restart_command:
+                - "systemctl restart nginx"
+                - "bash /opt/xnetvn_monitord/scripts/custom-restart.sh"
+```
+
 ## Environment Variables (.env + systemd)
 
 The daemon loads an optional `.env` file from:
@@ -73,6 +85,10 @@ The daemon loads an optional `.env` file from:
 
 Use `/opt/xnetvn_monitord/config/.env.example` as a template and copy it to
 `.env` without committing secrets.
+
+Install and auto-update refresh `/opt/xnetvn_monitord/config/main.example.yaml`
+and `/opt/xnetvn_monitord/config/.env.example` on every install/upgrade, without
+overwriting `/opt/xnetvn_monitord/config/main.yaml` or `/opt/xnetvn_monitord/config/.env`.
 
 When using `${VAR}` in `config/main.yaml`, define environment variables via a
 systemd EnvironmentFile:

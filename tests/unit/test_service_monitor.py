@@ -1390,6 +1390,47 @@ class TestServiceMonitorRestartLogic:
 
         assert mock_run.call_count >= 2
 
+    def test_should_execute_restart_command_sequence(self, mocker):
+        """Test restart executes a list of commands sequentially."""
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value = MagicMock(returncode=0, stdout="ok", stderr="")
+        mocker.patch("time.sleep")
+
+        monitor = ServiceMonitor({"enabled": True, "restart_wait_time": 0})
+        service_config = {
+            "name": "nginx",
+            "restart_command": [
+                "systemctl restart nginx",
+                "bash /opt/xnetvn_monitord/scripts/custom-restart.sh",
+            ],
+            "check_method": "systemctl",
+            "service_name": "nginx",
+        }
+
+        mocker.patch.object(monitor, "_check_service", return_value={"running": True})
+
+        assert monitor._restart_service(service_config) is True
+
+        mock_run.assert_has_calls(
+            [
+                call(
+                    "systemctl restart nginx",
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                ),
+                call(
+                    "bash /opt/xnetvn_monitord/scripts/custom-restart.sh",
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                ),
+            ],
+            any_order=False,
+        )
+
     def test_should_execute_post_restart_hook_and_check_status(self, mocker):
         """Test post-restart hook execution and status verification."""
         mock_run = mocker.patch("subprocess.run")
