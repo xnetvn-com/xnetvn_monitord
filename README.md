@@ -13,6 +13,7 @@
 ### Key Features
 
 - ⚡ **Automatic Recovery**: Auto-restart services when failures detected
+- 🔧 **Sequential Restart Commands**: Support list-based restart commands and scripts
 - 📊 **Comprehensive Monitoring**: CPU, RAM, disk space, and critical services
 - 🌐 **HTTP/HTTPS Health Checks**: Detect connection errors, 4xx/5xx, timeouts, slow responses
 - 📧 **Multi-channel Notifications**: Email, Telegram, Slack, Discord, Webhook
@@ -80,6 +81,10 @@ The daemon loads an optional `.env` file from:
 Use `/opt/xnetvn_monitord/config/.env.example` as a template and copy it to
 `.env` without committing secrets.
 
+The installer and auto-updater refresh `/opt/xnetvn_monitord/config/main.example.yaml`
+and `/opt/xnetvn_monitord/config/.env.example` on each install/upgrade, without
+overwriting `/opt/xnetvn_monitord/config/main.yaml` or `/opt/xnetvn_monitord/config/.env`.
+
 You can also use systemd `EnvironmentFile` entries when running via systemd:
 
 When using `${VAR}` in `config/main.yaml`, define environment variables via a
@@ -114,6 +119,11 @@ general:
 service_monitor:
   enabled: true
   action_on_failure: "restart_and_notify"
+  services:
+    - name: "nginx"
+      restart_command:
+        - "systemctl restart nginx"
+        - "bash /opt/xnetvn_monitord/scripts/custom-restart.sh"
 
 resource_monitor:
   enabled: true

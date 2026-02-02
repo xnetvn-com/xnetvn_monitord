@@ -17,6 +17,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -158,3 +160,61 @@ class TestUpdateCheckerResults:
         assert result.checked is True
         assert result.update_available is False
         assert "Failed to fetch" in result.message
+
+
+class TestUpdateCheckerApplyUpdate:
+    """Tests for applying updates and refreshing example files."""
+
+    def test_should_refresh_example_files_without_overwriting_user_config(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        """Ensure example files are refreshed while user config stays intact."""
+        install_dir = tmp_path / "install"
+        install_dir.mkdir()
+
+        target_dir = install_dir / "xnetvn_monitord"
+        target_dir.mkdir()
+        (target_dir / "old.txt").write_text("old")
+
+        config_dir = install_dir / "config"
+        config_dir.mkdir()
+        (config_dir / "main.yaml").write_text("user-config")
+        (config_dir / ".env").write_text("SECRET=1")
+        (config_dir / "main.example.yaml").write_text("old example")
+        (config_dir / ".env.example").write_text("old env")
+
+        package_root = tmp_path / "package" / "xnetvn_monitord-1.1.0"
+        source_dir = package_root / "src" / "xnetvn_monitord"
+        source_dir.mkdir(parents=True)
+        (source_dir / "new.txt").write_text("new")
+
+        release_config = package_root / "config"
+        release_config.mkdir(parents=True)
+        (release_config / "main.example.yaml").write_text("new example")
+        (release_config / ".env.example").write_text("new env")
+
+        tarball_path = tmp_path / "release.tar.gz"
+        with tarfile.open(tarball_path, "w:gz") as tar_handle:
+            tar_handle.add(package_root, arcname=package_root.name)
+
+        def _fake_urlretrieve(url: str, filename: str) -> None:
+            shutil.copy(tarball_path, filename)
+
+        monkeypatch.setattr(
+            "xnetvn_monitord.utils.update_checker.request.urlretrieve",
+            _fake_urlretrieve,
+        )
+
+        state_file = tmp_path / "state.json"
+        checker = UpdateChecker(
+            _build_config(state_file),
+            current_version="1.0.0",
+            install_dir=install_dir,
+        )
+
+        assert checker.apply_update("https://example.com/release.tar.gz") is True
+        assert (install_dir / "xnetvn_monitord" / "new.txt").read_text() == "new"
+        assert (config_dir / "main.example.yaml").read_text() == "new example"
+        assert (config_dir / ".env.example").read_text() == "new env"
+        assert (config_dir / "main.yaml").read_text() == "user-config"
+        assert (config_dir / ".env").read_text() == "SECRET=1"
