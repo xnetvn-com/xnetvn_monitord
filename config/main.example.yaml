@@ -129,7 +129,7 @@ service_monitor:
   # - name: Friendly display name used in logs/notifications
   # - enabled: Enable/disable the check without removing the entry
   # - check_method: systemctl | auto | service | openrc | process | process_regex
-  #   | custom_command | http | https
+  #   | custom_command | iptables | http | https
   # - service_name: Service unit name (systemctl/auto/service/openrc)
   # - service_name_pattern: Regex to match multiple systemd units (systemctl only)
   # - process_name: Exact process name (process only)
@@ -286,6 +286,18 @@ service_monitor:
       restart_command: "ufw reload"
       critical: true
       description: "Uncomplicated Firewall"
+
+    - name: "iptables"
+      enabled: false
+      check_method: "iptables"
+      check_timeout: 10
+      # Optional override if iptables is wrapped by another command
+      # check_command: "iptables -L -n"
+      restart_command:
+        - "systemctl restart netfilter-persistent"
+        - "systemctl restart iptables"
+      critical: true
+      description: "IPtables firewall"
 
     - name: "docker"
       enabled: false
@@ -477,6 +489,70 @@ service_monitor:
       service_name: "hestia"
       critical: true
       description: "HestiaCP panel health check"
+
+    - name: "roundcube_webmail"
+      enabled: false
+      check_method: "https"
+      url: "https://127.0.0.1/roundcube/"
+      http_method: "GET"
+      timeout_seconds: 8
+      expected_status_codes: [200, 301, 302, 401]
+      max_response_time_ms: 2000
+      verify_tls: false
+      restart_command:
+        - "systemctl restart nginx"
+        - "systemctl restart apache2"
+      service_name: "nginx"
+      critical: false
+      description: "Roundcube webmail health check"
+
+    - name: "snappymail_webmail"
+      enabled: false
+      check_method: "https"
+      url: "https://127.0.0.1/snappymail/"
+      http_method: "GET"
+      timeout_seconds: 8
+      expected_status_codes: [200, 301, 302, 401]
+      max_response_time_ms: 2000
+      verify_tls: false
+      restart_command:
+        - "systemctl restart nginx"
+        - "systemctl restart apache2"
+      service_name: "nginx"
+      critical: false
+      description: "SnappyMail webmail health check"
+
+    - name: "phpmyadmin"
+      enabled: false
+      check_method: "https"
+      url: "https://127.0.0.1/phpmyadmin/"
+      http_method: "GET"
+      timeout_seconds: 8
+      expected_status_codes: [200, 301, 302, 401]
+      max_response_time_ms: 2000
+      verify_tls: false
+      restart_command:
+        - "systemctl restart nginx"
+        - "systemctl restart apache2"
+      service_name: "nginx"
+      critical: false
+      description: "phpMyAdmin health check"
+
+    - name: "phppgadmin"
+      enabled: false
+      check_method: "https"
+      url: "https://127.0.0.1/phppgadmin/"
+      http_method: "GET"
+      timeout_seconds: 8
+      expected_status_codes: [200, 301, 302, 401]
+      max_response_time_ms: 2000
+      verify_tls: false
+      restart_command:
+        - "systemctl restart nginx"
+        - "systemctl restart apache2"
+      service_name: "nginx"
+      critical: false
+      description: "phpPgAdmin health check"
 
 # =============================================================================
 # RESOURCE MONITORING CONFIGURATION

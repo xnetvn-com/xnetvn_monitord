@@ -58,7 +58,9 @@ sudo systemctl status xnetvn_monitord
 - Redis, Memcached, Docker, SSH, Cron, Fail2Ban, UFW
 - HestiaCP stack: Hestia service, Exim/Postfix, Dovecot, Bind9/Named, FTP
 - ClamAV, SpamAssassin (spamd), custom services via regex
-- HTTP/HTTPS web endpoints for health checks (local or public)
+- IPtables firewall checks
+- HTTP/HTTPS web endpoints (local or public), including Roundcube/SnappyMail,
+  phpMyAdmin, and phpPgAdmin health checks
 
 ### Resources
 - **CPU Load**: 1/5/15-minute averages

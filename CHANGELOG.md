@@ -9,6 +9,8 @@ This format follows Keep a Changelog and uses Semantic Versioning.
 ### Added
 
 - Updated Vietnamese documentation (README, index, architecture, configuration, installation).
+- Added iptables check method and sample configuration entries for HestiaCP services/apps.
+- Added documentation updates covering iptables and HestiaCP webmail/admin health checks.
 
 ### Changed
 
@@ -16,7 +18,7 @@ This format follows Keep a Changelog and uses Semantic Versioning.
 
 ### Fixed
 
-- None.
+- Ensure update checks run on the first execution when no state file exists.
 
 ## [1.0.0] - 2026-01-31
 

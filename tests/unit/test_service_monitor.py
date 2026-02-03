@@ -549,6 +549,58 @@ class TestServiceMonitorCustomCommandCheck:
         assert monitor._check_custom_command(service_config) is False
 
 
+class TestServiceMonitorIptablesCheck:
+    """Tests for iptables check method."""
+
+    def test_should_return_true_when_iptables_command_succeeds(self, mocker):
+        """Test iptables check returns True on success."""
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value = MagicMock(returncode=0, stdout="")
+
+        monitor = ServiceMonitor({"enabled": True})
+        service_config = {
+            "name": "iptables",
+            "check_method": "iptables",
+            "check_timeout": 10,
+        }
+
+        assert monitor._check_iptables(service_config) is True
+        mock_run.assert_called_once_with(
+            ["iptables", "-L", "-n"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+    def test_should_return_false_when_iptables_missing(self, mocker):
+        """Test iptables check handles FileNotFoundError."""
+        mocker.patch("subprocess.run", side_effect=FileNotFoundError())
+
+        monitor = ServiceMonitor({"enabled": True})
+        service_config = {
+            "name": "iptables",
+            "check_method": "iptables",
+        }
+
+        assert monitor._check_iptables(service_config) is False
+
+    def test_should_delegate_to_custom_command_when_override_present(self, mocker):
+        """Test iptables check uses custom command when provided."""
+        mock_custom = mocker.patch.object(
+            ServiceMonitor, "_check_custom_command", return_value=True
+        )
+
+        monitor = ServiceMonitor({"enabled": True})
+        service_config = {
+            "name": "iptables",
+            "check_method": "iptables",
+            "check_command": "iptables -L -n",
+        }
+
+        assert monitor._check_iptables(service_config) is True
+        mock_custom.assert_called_once_with(service_config)
+
+
 class TestServiceMonitorHttpCheck:
     """Tests for HTTP/HTTPS check method."""
 

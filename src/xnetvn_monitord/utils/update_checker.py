@@ -219,6 +219,8 @@ class UpdateChecker:
     def should_check(self) -> bool:
         """Return True if update check interval has elapsed."""
         state = self._load_state_cached()
+        if "last_check_epoch" not in state:
+            return True
         last_check = state.get("last_check_epoch", 0)
         return (time.time() - float(last_check)) >= self._interval_seconds
 
