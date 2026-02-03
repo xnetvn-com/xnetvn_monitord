@@ -1,0 +1,55 @@
+name: "✨ Feature Request"
+description: "Propose a new feature for xnetvn_monitord"
+title: "[FEATURE] "
+labels: ["enhancement"]
+body:
+  - type: input
+    id: title
+    attributes:
+      label: "Feature name"
+      description: "Short name describing the feature."
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: "Description"
+      description: "Detailed description of the feature, purpose, usage, and benefits."
+    validations:
+      required: true
+  - type: textarea
+    id: benefits
+    attributes:
+      label: "Benefits"
+      description: "Explain the value delivered to users/the project."
+    validations:
+      required: true
+  - type: textarea
+    id: scenarios
+    attributes:
+      label: "Usage scenarios"
+      description: "Specific scenarios and expected outcomes."
+    validations:
+      required: true
+  - type: textarea
+    id: technical
+    attributes:
+      label: "Technical requirements"
+      description: "Required technologies, frameworks, or constraints."
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority"
+      options:
+        - "High"
+        - "Medium"
+        - "Low"
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: "Reference materials"
+      description: "Links to docs/RFCs/related articles (optional)."

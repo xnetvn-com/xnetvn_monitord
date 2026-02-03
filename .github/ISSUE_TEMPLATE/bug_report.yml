@@ -1,0 +1,71 @@
+name: "🐞 Bug Report"
+description: "Report a bug for xnetvn_monitord"
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: "Bug title"
+      description: "Clear, concise, accurately describing the issue."
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: "Severity"
+      options:
+        - "Blocker (Outage, major data loss)"
+        - "Critical (Core functionality impacted)"
+        - "Major (Secondary functionality impacted)"
+        - "Minor (Small issue, workaround available)"
+        - "Trivial (UI, typo)"
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority"
+      options:
+        - "P1 (Immediate)"
+        - "P2 (Important)"
+        - "P3 (Normal)"
+        - "P4 (Low)"
+    validations:
+      required: true
+  - type: input
+    id: module
+    attributes:
+      label: "Module/Functionality"
+      description: "e.g., service monitor, resource monitor, notifications, config loader"
+  - type: textarea
+    id: environment
+    attributes:
+      label: "Environment"
+      description: "Operating system, version, environment (dev/staging/prod)."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected result"
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: "Actual result"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Steps to reproduce"
+      description: "List each step explicitly."
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: "Logs/Screenshots/Videos"
+      description: "Attach logs, screenshots, or videos (mask sensitive data)."

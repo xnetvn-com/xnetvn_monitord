@@ -31,6 +31,7 @@ INSTALL_DIR="/opt/xnetvn_monitord"
 CONFIG_DIR="$INSTALL_DIR/config"
 LOG_DIR="/var/log/xnetvn_monitord"
 SYSTEMD_SERVICE="/etc/systemd/system/xnetvn_monitord.service"
+VENV_DIR="$INSTALL_DIR/.venv"
 
 # Functions
 log_info() {
@@ -66,6 +67,11 @@ check_dependencies() {
     if ! command -v pip3 &> /dev/null; then
         missing_deps+=("python3-pip")
     fi
+
+    # Check venv
+    if ! python3 -m venv --help &> /dev/null; then
+        missing_deps+=("python3-venv")
+    fi
     
     if [ ${#missing_deps[@]} -gt 0 ]; then
         log_warning "Missing dependencies: ${missing_deps[*]}"
@@ -79,8 +85,28 @@ check_dependencies() {
 
 install_python_packages() {
     log_info "Installing Python packages..."
-    pip3 install --upgrade pip
-    pip3 install PyYAML psutil
+
+    local venv_python="$VENV_DIR/bin/python"
+    local venv_pip="$VENV_DIR/bin/pip"
+
+    if [ ! -d "$VENV_DIR" ]; then
+        python3 -m venv "$VENV_DIR"
+        log_info "Created virtual environment at $VENV_DIR"
+    else
+        log_info "Using existing virtual environment at $VENV_DIR"
+    fi
+
+    "$venv_python" -m pip install --upgrade pip
+
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+    if [ -f "$script_dir/requirements.txt" ]; then
+        "$venv_pip" install -r "$script_dir/requirements.txt"
+    else
+        log_warning "requirements.txt not found, falling back to core packages"
+        "$venv_pip" install PyYAML psutil
+    fi
 }
 
 create_directories() {
@@ -204,8 +230,8 @@ main() {
     
     check_root
     check_dependencies
-    install_python_packages
     create_directories
+    install_python_packages
     copy_files
     set_permissions
     configure_systemd
