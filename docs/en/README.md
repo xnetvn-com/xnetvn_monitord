@@ -48,10 +48,11 @@ default), including:
 
 - Web stack: Nginx, Apache2, PHP-FPM, MariaDB/MySQL, PostgreSQL.
 - Cache and platform: Redis, Memcached, Docker.
-- Security and system: SSH, Cron, Fail2Ban, UFW.
+- Security and system: SSH, Cron, Fail2Ban, UFW, iptables.
 - HestiaCP stack: Hestia service, Exim/Postfix, Dovecot, Bind9/Named, FTP.
 - Anti-malware: ClamAV (daemon/freshclam), SpamAssassin (spamd).
-- HTTP/HTTPS health checks (public or localhost).
+- HTTP/HTTPS health checks (public or localhost), including Roundcube,
+    SnappyMail, phpMyAdmin, phpPgAdmin.
 
 ## System Requirements
 

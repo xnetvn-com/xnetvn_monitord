@@ -1,7 +1,7 @@
 ---
-post_title: "Configuration"
+post_title: "Cấu hình"
 author1: "xNetVN Inc."
-post_slug: "docs-en-config"
+post_slug: "docs-vi-config"
 microsoft_alias: ""
 featured_image: ""
 categories:
@@ -10,30 +10,30 @@ tags:
   - configuration
   - yaml
 ai_note: "AI-assisted"
-summary: "Configuration guide for xnetvn_monitord based on main.example.yaml."
+summary: "Hướng dẫn cấu hình xnetvn_monitord dựa trên main.example.yaml."
 post_date: "2026-02-03"
 ---
 
-## Configuration
+## Cấu hình
 
-This document describes the main configuration blocks in config/main.yaml.
+Tài liệu này mô tả các khối cấu hình chính trong config/main.yaml.
 
-## Overview
+## Tổng quan
 
-Primary sections:
+Các khối chính:
 
-- general: application metadata, logging, PID.
-- update_checker: GitHub Releases update checks.
-- service_monitor: service configuration (check method, interval, restart).
-- resource_monitor: CPU/Memory/Disk monitoring and recovery.
-- notifications: Email/Telegram/Slack/Discord/Webhook configuration.
+- general: thông tin ứng dụng, logging, PID.
+- update_checker: kiểm tra cập nhật GitHub Releases.
+- service_monitor: cấu hình dịch vụ (phương thức check, interval, restart).
+- resource_monitor: giám sát CPU/Memory/Disk và recovery.
+- notifications: cấu hình Email/Telegram/Slack/Discord/Webhook.
 
 ## general
 
-- app_name, app_version: display metadata.
-- check_interval: main loop interval (seconds).
+- app_name, app_version: thông tin hiển thị.
+- check_interval: chu kỳ vòng lặp chính (giây).
 - logging: level, file, rotation.
-- pid_file, work_dir: PID and runtime directory.
+- pid_file, work_dir: PID và thư mục runtime.
 
 ## update_checker
 
@@ -51,12 +51,12 @@ update_checker:
   service_name: "xnetvn_monitord"
 ```
 
-- GITHUB_TOKEN can be set in the environment to avoid rate limits.
-- auto_update is best-effort and restarts the service after updating.
+- GITHUB_TOKEN có thể được đặt trong môi trường để tránh rate limit.
+- auto_update chỉ chạy best-effort và sẽ restart service sau khi cập nhật.
 
 ## service_monitor
 
-Supported check_method values:
+Các check_method hỗ trợ:
 
 - systemctl, auto, service, openrc
 - process, process_regex
@@ -64,20 +64,19 @@ Supported check_method values:
 - iptables
 - http, https
 
-Key fields:
+Các trường quan trọng:
 
-- check_interval: number or {value, unit}.
+- check_interval: dạng number hoặc {value, unit}.
 - action_cooldown, max_restart_attempts, restart_wait_time, restart_cooldown.
 - service_name, service_name_pattern (systemd).
 - process_name, process_pattern, process_patterns, multi_instance.
 - url, http_method, headers, expected_status_codes, max_response_time_ms,
   verify_tls.
-- restart_command: string or list of commands.
+- restart_command: chuỗi hoặc danh sách lệnh.
 - pre_restart_hook, post_restart_hook.
-- check_command/check_timeout can also be used with iptables to override the
-  default command.
+- check_command/check_timeout có thể dùng với iptables để override lệnh mặc định.
 
-Iptables check example:
+Ví dụ iptables:
 
 ```yaml
 service_monitor:
@@ -92,7 +91,7 @@ service_monitor:
         - "systemctl restart iptables"
 ```
 
-List-based restart_command example:
+Ví dụ restart_command dạng danh sách:
 
 ```yaml
 service_monitor:
@@ -120,7 +119,7 @@ resource_monitor:
     recovery_command: "systemctl restart heavy-worker"
 ```
 
-- recovery_command is executed by the shell with a 60s timeout.
+- recovery_command được thực thi bằng shell với timeout 60s.
 
 ### memory
 
@@ -145,10 +144,9 @@ resource_monitor:
         free_gb_threshold: 5.0
 ```
 
-- Both paths (string) and mount_points (dict) are supported for backward
-  compatibility.
-- action_on_threshold appears in main.example.yaml but is not used in the
-  current codebase.
+- Hỗ trợ paths (chuỗi) và mount_points (dict) để tương thích cấu hình cũ.
+- action_on_threshold xuất hiện trong main.example.yaml nhưng chưa được sử dụng
+  trong mã nguồn hiện tại.
 
 ## recovery_actions
 
@@ -163,24 +161,24 @@ resource_monitor:
     low_disk_services: []
 ```
 
-- cooldown_period applies per action_type.
-- ResourceMonitor restarts services from these lists when thresholds are exceeded.
+- cooldown_period áp dụng cho từng action_type.
+- ResourceMonitor sẽ restart services theo danh sách này khi vượt ngưỡng.
 
 ## notifications
 
-Global settings:
+Thông số chung:
 
 - notifications.enabled, min_severity.
 - rate_limit: min_interval, max_per_hour.
 - content_filter: redact_patterns, redact_replacement.
 
-Each channel (email/telegram/slack/discord/webhook) has:
+Mỗi kênh (email/telegram/slack/discord/webhook) có:
 
-- enabled, test_on_startup (if supported).
-- min_severity override.
-- rate_limit override (optional).
+- enabled, test_on_startup (nếu có).
+- min_severity (override).
+- rate_limit override (tùy chọn).
 
-Slack example:
+Ví dụ Slack:
 
 ```yaml
 notifications:

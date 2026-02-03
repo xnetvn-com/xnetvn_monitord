@@ -165,6 +165,11 @@ class ServiceMonitor:
                 status["running"] = running
                 status["message"] = "Check passed" if running else "Check failed"
 
+            elif check_method == "iptables":
+                running = self._check_iptables(service_config)
+                status["running"] = running
+                status["message"] = "Active" if running else "Inactive or failed"
+
             elif check_method in ["http", "https"]:
                 http_status = self._check_http(service_config)
                 status["running"] = http_status["running"]
@@ -500,6 +505,35 @@ class ServiceMonitor:
             return result.returncode == 0
         except Exception as e:
             logger.error(f"Error running custom check command: {str(e)}")
+            return False
+
+    def _check_iptables(self, service_config: Dict) -> bool:
+        """Check iptables availability and status.
+
+        Args:
+            service_config: Service configuration dictionary.
+
+        Returns:
+            True if iptables check succeeds, False otherwise.
+        """
+        if service_config.get("check_command"):
+            return self._check_custom_command(service_config)
+
+        timeout_seconds = service_config.get("check_timeout", 10)
+
+        try:
+            result = subprocess.run(
+                ["iptables", "-L", "-n"],
+                capture_output=True,
+                text=True,
+                timeout=timeout_seconds,
+            )
+            return result.returncode == 0
+        except FileNotFoundError:
+            logger.warning("iptables command not found")
+            return False
+        except Exception as e:
+            logger.error(f"Error running iptables check: {str(e)}")
             return False
 
     def _check_http(self, service_config: Dict) -> Dict:
