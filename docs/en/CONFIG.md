@@ -61,6 +61,7 @@ Supported check_method values:
 - systemctl, auto, service, openrc
 - process, process_regex
 - custom_command
+- iptables
 - http, https
 
 Key fields:
@@ -73,6 +74,23 @@ Key fields:
   verify_tls.
 - restart_command: string or list of commands.
 - pre_restart_hook, post_restart_hook.
+- check_command/check_timeout can also be used with iptables to override the
+  default command.
+
+Iptables check example:
+
+```yaml
+service_monitor:
+  services:
+    - name: "iptables"
+      enabled: false
+      check_method: "iptables"
+      check_timeout: 10
+      # check_command: "iptables -L -n"
+      restart_command:
+        - "systemctl restart netfilter-persistent"
+        - "systemctl restart iptables"
+```
 
 List-based restart_command example:
 
