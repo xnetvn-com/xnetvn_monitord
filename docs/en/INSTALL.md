@@ -27,7 +27,8 @@ post_date: "2026-02-03"
 The scripts/install.sh script will:
 
 - Install python3 and pip3 (if missing).
-- Install PyYAML and psutil.
+- Create a virtual environment at /opt/xnetvn_monitord/.venv.
+- Install PyYAML and psutil inside the virtual environment.
 - Copy source code to /opt/xnetvn_monitord.
 - Copy configuration to /opt/xnetvn_monitord/config/main.yaml.
 - Always refresh /opt/xnetvn_monitord/config/main.example.yaml and
@@ -36,6 +37,9 @@ The scripts/install.sh script will:
 
 Note: the script does not overwrite /opt/xnetvn_monitord/config/main.yaml or
 /opt/xnetvn_monitord/config/.env if they already exist.
+
+Note (Ubuntu 24 LTS / PEP 668): the script always uses a virtual environment
+to avoid externally-managed-environment errors when installing Python packages.
 
 Note: the script is optimized for systemd. For OpenRC (Alpine), install manually
 or create an OpenRC service according to your distribution.

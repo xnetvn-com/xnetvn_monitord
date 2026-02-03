@@ -36,6 +36,9 @@ cd xnetvn_monitord
 # Run installation script
 sudo bash scripts/install.sh
 
+# Note (Ubuntu 24 LTS / PEP 668): the installer uses
+# /opt/xnetvn_monitord/.venv for Python packages.
+
 # Edit configuration
 sudo vi /opt/xnetvn_monitord/config/main.yaml
 
