@@ -1,27 +1,52 @@
-# xnetvn_monitord
+---
+post_title: "xnetvn_monitord"
+author1: "xNetVN Inc."
+post_slug: "docs-en-readme"
+microsoft_alias: ""
+featured_image: ""
+categories:
+    - monitoring
+tags:
+    - daemon
+    - linux
+    - monitoring
+ai_note: "AI-assisted"
+summary: "Overview, key features, and quick start for xnetvn_monitord."
+post_date: "2026-02-03"
+---
 
-**xnetvn_monitord** is a monitoring daemon for modern Linux servers that tracks critical services and system resources. When failures or threshold breaches are detected, the daemon automatically performs recovery actions and sends notifications via Email/Telegram.
+## xnetvn_monitord
+
+**xnetvn_monitord** is a Linux server monitoring daemon that tracks services and
+system resources. When it detects failures or threshold breaches, the daemon
+automatically performs recovery actions and sends notifications via Email,
+Telegram, Slack, Discord, or Webhook.
 
 ## Goals
 
-- Continuously monitor critical services and system resources.
+- Continuously monitor critical services and resources.
 - Automatically recover to reduce downtime.
-- Send timely alerts with rate limiting and content filtering.
+- Send timely alerts with rate limiting and sensitive-content filtering.
 
 ## Key Features
 
-- Service monitoring (systemd/OpenRC/SysV/process/regex/custom/HTTP/HTTPS).
-- Sequential restart commands via list-based `restart_command`.
-- Per-service check intervals and action cooldowns.
-- Pre- and post-recovery notifications.
-- CPU/RAM/Disk threshold monitoring.
+- Service monitoring via `systemctl`, `service`, `openrc`, process checks, regex,
+    custom commands, and HTTP/HTTPS health checks.
+- List-based `restart_command` to run multiple commands in order.
+- CPU/RAM/Disk threshold monitoring with per-mount support.
+- Recovery actions with cooldowns and `pre_restart_hook`/`post_restart_hook`.
+- Service check frequency in seconds/minutes/hours.
+- Pre/post recovery notifications with min severity and rate limiting.
+- Email, Telegram, Slack, Discord, and Webhook notifications.
+- Update checker via GitHub Releases with optional auto update.
+- Logging with rotation and PID file support.
 
 ## Common Services (Ubuntu Web Server & HestiaCP)
 
-The full sample list is provided in `config/main.example.yaml` (disabled by default),
-including the most common service groups:
+The full sample list is provided in `config/main.example.yaml` (disabled by
+default), including:
 
-- Web stack: Nginx, Apache2, PHP-FPM (all versions), MariaDB/MySQL, PostgreSQL.
+- Web stack: Nginx, Apache2, PHP-FPM, MariaDB/MySQL, PostgreSQL.
 - Cache and platform: Redis, Memcached, Docker.
 - Security and system: SSH, Cron, Fail2Ban, UFW.
 - HestiaCP stack: Hestia service, Exim/Postfix, Dovecot, Bind9/Named, FTP.
@@ -30,41 +55,42 @@ including the most common service groups:
 
 ## System Requirements
 
-- Linux distributions: Ubuntu LTS, Debian, CentOS, RHEL, Rocky/Alma, Fedora, Arch,
-  openSUSE/SLES, Alpine
-- Python 3.8+ (3.10+ recommended)
-- System privileges to manage services and write logs
+- Linux distributions: Ubuntu/Debian/RHEL/CentOS/Rocky/Alma/Fedora/Arch/
+    openSUSE/Alpine.
+- Python 3.8+ (3.10+ recommended).
+- System privileges for service checks and log writing.
 
 ## Service Manager Compatibility
 
-- systemd (Ubuntu/Debian/RHEL/CentOS/Rocky/Alma/Fedora/Arch/openSUSE/SLES)
-- OpenRC (Alpine)
+- systemd
+- OpenRC
 - SysV init (fallback)
 
-Override auto-detection with the `XNETVN_SERVICE_MANAGER` environment variable
-(`systemd`, `openrc`, or `sysv`).
+Override auto-detection with `XNETVN_SERVICE_MANAGER` (`systemd`, `openrc`, or
+`sysv`).
 
 ## Quick Installation
 
-```bash
-git clone https://github.com/xnetvn-com/xnetvn_monitord.git
-cd xnetvn_monitord
-sudo bash scripts/install.sh
-```
+- Production install via script (Debian/Ubuntu only, as the script uses apt-get):
+    - sudo bash scripts/install.sh
+- Dev/test install: see docs/en/INSTALL.md.
+- Other distributions: install manually following INSTALL.md.
 
 ## Configuration
 
-Default configuration file: `config/main.yaml` (see `config/main.example.yaml`).
+- Default config file: config/main.yaml (see config/main.example.yaml).
+- Environment variable expansion supports $VAR or ${VAR}.
 
 Key sections:
 
-- `general`: application metadata, logging, PID
-- `service_monitor`: services to watch and recovery actions
-- `service_monitor` also supports HTTP/HTTPS health checks and per-service intervals
-- `resource_monitor`: CPU/RAM/Disk thresholds and recovery actions
-- `notifications`: Email/Telegram and rate limits
+- general: app metadata, logging, PID.
+- update_checker: update checks and optional auto update.
+- service_monitor: services, intervals, check methods, recovery actions.
+- resource_monitor: CPU/RAM/Disk thresholds, recovery commands, restart services.
+- notifications: Email/Telegram/Slack/Discord/Webhook, rate limits, content
+    filtering, min severity.
 
-Example restart command list:
+Example list-based `restart_command`:
 
 ```yaml
 service_monitor:
@@ -77,47 +103,58 @@ service_monitor:
 
 ## Environment Variables (.env + systemd)
 
-The daemon loads an optional `.env` file from:
+The daemon loads a `.env` file from:
 
 ```
 /opt/xnetvn_monitord/config/.env
 ```
 
 Use `/opt/xnetvn_monitord/config/.env.example` as a template and copy it to
-`.env` without committing secrets.
+`.env` (do not commit secrets). The install script and auto update refresh
+`main.example.yaml` and `.env.example`, but never overwrite `main.yaml` or `.env`.
 
-Install and auto-update refresh `/opt/xnetvn_monitord/config/main.example.yaml`
-and `/opt/xnetvn_monitord/config/.env.example` on every install/upgrade, without
-overwriting `/opt/xnetvn_monitord/config/main.yaml` or `/opt/xnetvn_monitord/config/.env`.
-
-When using `${VAR}` in `config/main.yaml`, define environment variables via a
-systemd EnvironmentFile:
+Define variables via a systemd EnvironmentFile:
 
 ```
 /etc/xnetvn_monitord/xnetvn_monitord.env
 ```
 
-Example entries:
+Common variables:
 
-```
-EMAIL_PASSWORD=your_smtp_password
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-```
+- EMAIL_PASSWORD
+- TELEGRAM_BOT_TOKEN
+- TELEGRAM_CHAT_ID_1
+- SLACK_WEBHOOK_URL
+- DISCORD_WEBHOOK_URL
+- WEBHOOK_URL_1
+- GITHUB_TOKEN
+- XNETVN_SERVICE_MANAGER
 
-After updating the file:
+After updates:
 
 ```
 sudo systemctl daemon-reload
 sudo systemctl restart xnetvn_monitord
 ```
 
-## Operations
+Operational notes:
 
-```bash
-sudo systemctl start xnetvn_monitord
-sudo systemctl status xnetvn_monitord
-sudo journalctl -u xnetvn_monitord -f
-```
+- list-based `restart_command` runs sequentially.
+- cooldowns and rate limits prevent repeated actions and alert spam.
+- per-channel `test_on_startup` validates configuration at startup.
+
+## Quick Operations
+
+- sudo systemctl start xnetvn_monitord
+- sudo systemctl status xnetvn_monitord
+- sudo journalctl -u xnetvn_monitord -f
+
+## Documentation
+
+- Index: docs/en/index.md.
+- Architecture: docs/en/ARCHITECTURE.md.
+- Installation: docs/en/INSTALL.md.
+- Operations: docs/en/guides/operation-guide.md.
 
 ## Contact
 

@@ -8,7 +8,7 @@
 
 ## 🎯 Overview
 
-**xnetvn_monitord** is an enterprise-grade monitoring solution designed to automatically track critical services and system resources on modern Linux servers. When a service fails or resources exceed thresholds, the daemon automatically performs recovery actions and sends notifications via email/Telegram.
+**xnetvn_monitord** is an enterprise-grade monitoring solution designed to automatically track critical services and system resources on modern Linux servers. When a service fails or resources exceed thresholds, the daemon performs recovery actions and sends notifications via email, Telegram, Slack, Discord, or Webhook.
 
 ### Key Features
 
@@ -20,6 +20,7 @@
 - 🔒 **Security First**: Sensitive data filtering, rate limiting, audit logging
 - 🔄 **Flexible Configuration**: Easy YAML config with environment variables support
 - 🛡️ **Production Ready**: Cooldown mechanisms, retry logic, graceful shutdown
+- ⬆️ **Update Checker**: GitHub Releases checks with optional auto update
 
 ---
 
@@ -94,11 +95,15 @@ systemd EnvironmentFile:
 /etc/xnetvn_monitord/xnetvn_monitord.env
 ```
 
-Example entries:
+Common entries:
 
 ```
 EMAIL_PASSWORD=your_smtp_password
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+SLACK_WEBHOOK_URL=your_slack_webhook_url
+DISCORD_WEBHOOK_URL=your_discord_webhook_url
+WEBHOOK_URL_1=your_webhook_url
+GITHUB_TOKEN=your_github_token
 ```
 
 After updating the file:
@@ -115,6 +120,10 @@ sudo systemctl restart xnetvn_monitord
 ```yaml
 general:
   check_interval: 60
+
+update_checker:
+  enabled: true
+  auto_update: false
 
 service_monitor:
   enabled: true
