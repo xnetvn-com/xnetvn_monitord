@@ -68,8 +68,12 @@ check_dependencies() {
         missing_deps+=("python3-pip")
     fi
 
-    # Check venv
+    # Check venv/ensurepip (ensurepip is provided by python3-venv on Debian/Ubuntu)
     if ! python3 -m venv --help &> /dev/null; then
+        missing_deps+=("python3-venv")
+    fi
+
+    if ! python3 -c "import ensurepip" &> /dev/null; then
         missing_deps+=("python3-venv")
     fi
     
@@ -90,10 +94,24 @@ install_python_packages() {
     local venv_pip="$VENV_DIR/bin/pip"
 
     if [ ! -d "$VENV_DIR" ]; then
-        python3 -m venv "$VENV_DIR"
+        if ! python3 -m venv "$VENV_DIR"; then
+            log_warning "Failed to create virtual environment. Installing python3-venv and retrying..."
+            apt-get update
+            apt-get install -y python3-venv
+            python3 -m venv "$VENV_DIR"
+        fi
         log_info "Created virtual environment at $VENV_DIR"
     else
         log_info "Using existing virtual environment at $VENV_DIR"
+    fi
+
+    if ! "$venv_python" -m pip --version &> /dev/null; then
+        log_warning "pip is missing in the virtual environment. Bootstrapping with ensurepip..."
+        if ! "$venv_python" -m ensurepip --upgrade &> /dev/null; then
+            log_warning "ensurepip failed. Recreating virtual environment..."
+            rm -rf "$VENV_DIR"
+            python3 -m venv "$VENV_DIR"
+        fi
     fi
 
     "$venv_python" -m pip install --upgrade pip

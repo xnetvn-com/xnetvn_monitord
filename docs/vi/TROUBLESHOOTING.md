@@ -28,6 +28,22 @@ post_date: "2026-02-03"
 - Kiểm tra cấu hình:
   - `/opt/xnetvn_monitord/config/main.yaml`
 
+## 1.1 Lỗi cài đặt do thiếu python3-venv hoặc pip
+
+### Triệu chứng
+
+- `python3 -m venv` báo `ensurepip is not available`.
+- Trình cài đặt báo `/opt/xnetvn_monitord/.venv/bin/python: No module named pip`.
+
+### Cách xử lý
+
+- Cài gói venv và chạy lại trình cài đặt:
+  - `sudo apt-get update && sudo apt-get install -y python3-venv`
+  - `sudo bash scripts/install.sh`
+- Nếu virtual environment đã tồn tại, xóa và cài lại:
+  - `sudo rm -rf /opt/xnetvn_monitord/.venv`
+  - `sudo bash scripts/install.sh`
+
 ## 2. Không gửi được email/telegram
 
 ### Kiểm tra

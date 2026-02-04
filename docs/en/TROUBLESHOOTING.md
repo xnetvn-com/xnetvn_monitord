@@ -28,6 +28,22 @@ post_date: "2026-02-03"
 - Verify configuration:
   - `/opt/xnetvn_monitord/config/main.yaml`
 
+## 1.1 Installation fails with python3-venv or missing pip
+
+### Symptoms
+
+- `python3 -m venv` fails with `ensurepip is not available`.
+- The installer reports `/opt/xnetvn_monitord/.venv/bin/python: No module named pip`.
+
+### Fix
+
+- Install the venv package and re-run the installer:
+  - `sudo apt-get update && sudo apt-get install -y python3-venv`
+  - `sudo bash scripts/install.sh`
+- If the virtual environment already exists, remove it and reinstall:
+  - `sudo rm -rf /opt/xnetvn_monitord/.venv`
+  - `sudo bash scripts/install.sh`
+
 ## 2. Email/Telegram notifications are not sent
 
 ### Checks
