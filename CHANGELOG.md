@@ -21,6 +21,7 @@ This format follows Keep a Changelog and uses Semantic Versioning.
 - Ensure update checks run on the first execution when no state file exists.
 - Harden installer venv setup to handle missing ensurepip/pip on Ubuntu 24 LTS.
 - Documented Ubuntu 24 LTS venv/pip installation recovery steps.
+- Merged PR #6 (f1c5c56): feat(installation): enhance venv setup and add recovery docs for Ubuntu 24 LTS.
 
 ## [1.0.0] - 2026-01-31
 
