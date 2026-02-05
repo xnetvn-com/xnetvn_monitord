@@ -31,7 +31,8 @@ Tất cả các thay đổi quan trọng của dự án sẽ được ghi ở đ
 
 ### Fixed
 
-- Chưa có.
+- Sua loi nhan dien phien ban trong script update va lam moi updater tai
+	/opt/xnetvn_monitord/scripts.
 
 ## [1.0.0] - 2026-01-31
 

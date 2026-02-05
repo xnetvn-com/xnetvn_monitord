@@ -132,6 +132,7 @@ create_directories() {
     
     mkdir -p "$INSTALL_DIR"
     mkdir -p "$CONFIG_DIR"
+    mkdir -p "$INSTALL_DIR/scripts"
     mkdir -p "$LOG_DIR"
     mkdir -p "$INSTALL_DIR/.local"/{logs,reports,tmp}
     
@@ -151,6 +152,14 @@ copy_files() {
     else
         log_error "Source directory not found: $SCRIPT_DIR/src"
         exit 1
+    fi
+
+    if [ -f "$SCRIPT_DIR/scripts/update.sh" ]; then
+        cp "$SCRIPT_DIR/scripts/update.sh" "$INSTALL_DIR/scripts/update.sh"
+        chmod 755 "$INSTALL_DIR/scripts/update.sh"
+        log_info "Update script copied to $INSTALL_DIR/scripts/update.sh"
+    else
+        log_warning "Update script not found in repository"
     fi
     
     # Copy configuration

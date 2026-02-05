@@ -31,7 +31,8 @@ This format follows Keep a Changelog and uses Semantic Versioning.
 
 ### Fixed
 
-- None.
+- Fixed update script version detection to avoid import failures and refresh the
+	installed updater in /opt/xnetvn_monitord/scripts.
 
 ## [1.0.0] - 2026-01-31
 

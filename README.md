@@ -56,6 +56,9 @@ sudo systemctl status xnetvn_monitord
 ### Manual Update
 
 ```bash
+sudo bash /opt/xnetvn_monitord/scripts/update.sh
+
+# Or run from the repository clone
 sudo bash scripts/update.sh
 ```
 

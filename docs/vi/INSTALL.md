@@ -78,6 +78,9 @@ Script scripts/update.sh kiểm tra GitHub Releases và cập nhật phiên bả
 Script sẽ tạo backup trước khi cập nhật và không ghi đè main.yaml hoặc .env.
 
 ```
+sudo bash /opt/xnetvn_monitord/scripts/update.sh
+
+# Hoac chay tu repo
 sudo bash scripts/update.sh
 ```
 
@@ -86,6 +89,12 @@ Tuỳ chọn phổ biến:
 ```
 sudo bash scripts/update.sh --yes
 sudo bash scripts/update.sh --quiet
+```
+
+Nếu môi trường chỉ hỗ trợ IPv4:
+
+```
+XNETVN_MONITORD_FORCE_IPV4=1 sudo bash /opt/xnetvn_monitord/scripts/update.sh
 ```
 
 ## 4. Cài đặt cho môi trường phát triển
