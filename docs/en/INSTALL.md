@@ -30,7 +30,8 @@ The scripts/install.sh script will:
 - Create a virtual environment at /opt/xnetvn_monitord/.venv.
 - Install PyYAML and psutil inside the virtual environment.
 - Copy source code to /opt/xnetvn_monitord.
-- Copy configuration to /opt/xnetvn_monitord/config/main.yaml.
+- Create /opt/xnetvn_monitord/config/main.yaml and /opt/xnetvn_monitord/config/.env
+	from the example files if they do not exist, with permissions set to 0600.
 - Always refresh /opt/xnetvn_monitord/config/main.example.yaml and
   /opt/xnetvn_monitord/config/.env.example (overwriting template files).
 - Install the systemd unit to /etc/systemd/system/xnetvn_monitord.service.
@@ -71,7 +72,23 @@ sudo systemctl start xnetvn_monitord
 sudo systemctl status xnetvn_monitord
 ```
 
-## 3. Development Setup
+## 3. Manual Update
+
+The scripts/update.sh script checks GitHub Releases and applies updates.
+It creates a backup before updating and never overwrites main.yaml or .env.
+
+```
+sudo bash scripts/update.sh
+```
+
+Common flags:
+
+```
+sudo bash scripts/update.sh --yes
+sudo bash scripts/update.sh --quiet
+```
+
+## 4. Development Setup
 
 ```
 python3 -m venv venv
@@ -85,12 +102,12 @@ Run the daemon manually:
 python3 -m xnetvn_monitord.daemon config/main.yaml
 ```
 
-## 4. Logs and PID File
+## 5. Logs and PID File
 
 - Default log: /var/log/xnetvn_monitord/monitor.log.
 - Default PID file: /var/run/xnetvn_monitord.pid.
 
-## 5. Uninstall (Manual)
+## 6. Uninstall (Manual)
 
 ```
 sudo systemctl stop xnetvn_monitord

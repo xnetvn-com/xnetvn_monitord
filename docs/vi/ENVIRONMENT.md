@@ -24,6 +24,9 @@ ${VAR}. Khi biến môi trường không tồn tại, giá trị sẽ được t
 Tệp mẫu /opt/xnetvn_monitord/config/.env.example được làm mới mỗi lần cài đặt
 hoặc nâng cấp để tham khảo các biến môi trường mới nhất.
 
+Ở lần cài đặt đầu tiên, installer sẽ tạo /opt/xnetvn_monitord/config/.env từ
+file mẫu nếu chưa tồn tại và đặt quyền 0600.
+
 ## 2. Biến môi trường bắt buộc/khuyến nghị
 
 | Biến | Mục đích | Bắt buộc | Ghi chú |

@@ -23,7 +23,9 @@ import socket
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
+
+from xnetvn_monitord.utils.network import force_ipv4
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +47,7 @@ class TelegramNotifier:
         self.disable_preview = config.get("disable_preview", True)
         self.timeout = config.get("timeout", 30)
         self.hostname = socket.gethostname()
+        self.only_ipv4 = config.get("only_ipv4", False)
         self.api_base_url = f"https://api.telegram.org/bot{self.bot_token}"
 
     def send_notification(self, message: str) -> bool:
@@ -70,7 +73,8 @@ class TelegramNotifier:
 
         success_count = 0
         for chat_id in self.chat_ids:
-            if self._send_message(chat_id, message):
+            chat_target, thread_id = self._parse_chat_target(str(chat_id))
+            if self._send_message(chat_target, message, thread_id):
                 success_count += 1
 
         if success_count > 0:
@@ -82,7 +86,12 @@ class TelegramNotifier:
             logger.error("Failed to send Telegram notification to any chat")
             return False
 
-    def _send_message(self, chat_id: str, message: str) -> bool:
+    def _send_message(
+        self,
+        chat_id: str,
+        message: str,
+        message_thread_id: Optional[int] = None,
+    ) -> bool:
         """Send a message to a specific chat ID.
 
         Args:
@@ -101,23 +110,26 @@ class TelegramNotifier:
                 "disable_web_page_preview": self.disable_preview,
             }
 
+            if message_thread_id is not None:
+                data["message_thread_id"] = message_thread_id
+
             encoded_data = urllib.parse.urlencode(data).encode("utf-8")
             request = urllib.request.Request(url, data=encoded_data, method="POST")
 
-            with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                result = json.loads(response.read().decode("utf-8"))
-                if result.get("ok"):
-                    logger.debug(f"Telegram message sent successfully to chat {chat_id}")
-                    return True
-                else:
+            with force_ipv4(self.only_ipv4):
+                with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                    result = json.loads(response.read().decode("utf-8"))
+                    if result.get("ok"):
+                        logger.debug(
+                            "Telegram message sent successfully to chat %s", chat_id
+                        )
+                        return True
                     logger.error(
-                        f"Telegram API error for chat {chat_id}: {result.get('description')}"
+                        "Telegram API error for chat %s: %s",
+                        chat_id,
+                        result.get("description"),
                     )
                     return False
-
-        except urllib.error.URLError as e:
-            logger.error(f"URL error sending Telegram message to {chat_id}: {str(e)}")
-            return False
         except Exception as e:
             logger.error(
                 f"Error sending Telegram message to {chat_id}: {str(e)}", exc_info=True
@@ -205,6 +217,29 @@ class TelegramNotifier:
 _xNetVN Monitor_
 """
         return message.strip()
+
+    @staticmethod
+    def _parse_chat_target(chat_id: str) -> Tuple[str, Optional[int]]:
+        """Parse Telegram chat ID and optional topic thread ID.
+
+        Args:
+            chat_id: Chat identifier, optionally with "_" separator.
+
+        Returns:
+            Tuple of chat ID and optional message thread ID.
+        """
+        if "_" not in chat_id:
+            return chat_id, None
+
+        base_id, thread_id = chat_id.split("_", 1)
+        if not base_id:
+            return chat_id, None
+
+        if thread_id.isdigit():
+            return base_id, int(thread_id)
+
+        logger.warning("Invalid Telegram topic id in chat_id: %s", chat_id)
+        return base_id, None
 
     def _format_resource_alert(self, resource_type: str, details: Dict) -> str:
         """Format resource alert message.
@@ -309,18 +344,20 @@ _xNetVN Monitor_
             url = f"{self.api_base_url}/getMe"
             request = urllib.request.Request(url, method="GET")
 
-            with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                result = json.loads(response.read().decode("utf-8"))
-                if result.get("ok"):
-                    bot_info = result.get("result", {})
-                    bot_name = bot_info.get("username", "Unknown")
-                    logger.info(
-                        f"Telegram bot connection test successful. Bot: @{bot_name}"
-                    )
-                    return True
-                else:
+            with force_ipv4(self.only_ipv4):
+                with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                    result = json.loads(response.read().decode("utf-8"))
+                    if result.get("ok"):
+                        bot_info = result.get("result", {})
+                        bot_name = bot_info.get("username", "Unknown")
+                        logger.info(
+                            "Telegram bot connection test successful. Bot: @%s",
+                            bot_name,
+                        )
+                        return True
                     logger.error(
-                        f"Telegram API error: {result.get('description')}"
+                        "Telegram API error: %s",
+                        result.get("description"),
                     )
                     return False
 

@@ -20,6 +20,7 @@ This module provides a unified interface for managing multiple notification chan
 import copy
 import logging
 import re
+import socket
 import time
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
@@ -56,6 +57,8 @@ class NotificationManager:
         self.rate_limit_config = config.get("rate_limit", {})
         self.content_filter_config = config.get("content_filter", {})
         self.default_min_severity = config.get("min_severity", "info")
+        self.hostname = socket.gethostname()
+        self.only_ipv4 = config.get("only_ipv4", False)
 
         # Initialize notification channels
         self.email_notifier = None
@@ -65,23 +68,23 @@ class NotificationManager:
         self.discord_notifier = None
 
         if self.enabled:
-            email_config = config.get("email", {})
+            email_config = self._apply_network_defaults(config.get("email", {}))
             if email_config.get("enabled", False):
                 self.email_notifier = EmailNotifier(email_config)
 
-            telegram_config = config.get("telegram", {})
+            telegram_config = self._apply_network_defaults(config.get("telegram", {}))
             if telegram_config.get("enabled", False):
                 self.telegram_notifier = TelegramNotifier(telegram_config)
 
-            webhook_config = config.get("webhook", {})
+            webhook_config = self._apply_network_defaults(config.get("webhook", {}))
             if webhook_config.get("enabled", False):
                 self.webhook_notifier = WebhookNotifier(webhook_config)
 
-            slack_config = config.get("slack", {})
+            slack_config = self._apply_network_defaults(config.get("slack", {}))
             if slack_config.get("enabled", False):
                 self.slack_notifier = SlackNotifier(slack_config)
 
-            discord_config = config.get("discord", {})
+            discord_config = self._apply_network_defaults(config.get("discord", {}))
             if discord_config.get("enabled", False):
                 self.discord_notifier = DiscordNotifier(discord_config)
 
@@ -171,41 +174,53 @@ class NotificationManager:
 
         # Filter sensitive content
         message = self._filter_sensitive_content(message)
+        hostname = self._resolve_hostname({})
+        message_with_host = self._prepend_hostname(message, hostname)
 
         success = False
 
         # Send to all enabled channels
         if self.email_notifier:
             try:
-                if self.email_notifier.send_notification(subject, message):
+                if self.email_notifier.send_notification(subject, message_with_host):
                     success = True
             except Exception as e:
                 logger.error(f"Error sending email notification: {str(e)}")
 
         if self.telegram_notifier:
             try:
-                if self.telegram_notifier.send_notification(f"{subject}\n\n{message}"):
+                if self.telegram_notifier.send_notification(
+                    f"{message_with_host}\n\n{subject}"
+                ):
                     success = True
             except Exception as e:
                 logger.error(f"Error sending Telegram notification: {str(e)}")
 
         if self.slack_notifier:
             try:
-                if self.slack_notifier.send_notification(f"{subject}\n{message}"):
+                if self.slack_notifier.send_notification(
+                    f"{message_with_host}\n\n{subject}"
+                ):
                     success = True
             except Exception as e:
                 logger.error(f"Error sending Slack notification: {str(e)}")
 
         if self.discord_notifier:
             try:
-                if self.discord_notifier.send_notification(f"{subject}\n{message}"):
+                if self.discord_notifier.send_notification(
+                    f"{message_with_host}\n\n{subject}"
+                ):
                     success = True
             except Exception as e:
                 logger.error(f"Error sending Discord notification: {str(e)}")
 
         if self.webhook_notifier:
             try:
-                payload = {"subject": subject, "message": message}
+                payload = {
+                    "subject": subject,
+                    "message": message,
+                    "hostname": hostname,
+                }
                 if self.webhook_notifier.send_notification(payload):
                     success = True
             except Exception as e:
@@ -419,6 +434,9 @@ class NotificationManager:
         """
         title = self._build_subject(report_type, report)
         lines = [title, "=" * len(title)]
+        hostname = self._resolve_hostname(report)
+        if hostname:
+            lines.append(f"Hostname: {hostname}")
         lines.append(f"Timestamp: {self._format_timestamp(report.get('timestamp'))}")
         lines.append(f"Severity: {self._normalize_severity(report.get('severity', 'info'))}")
 
@@ -455,9 +473,14 @@ class NotificationManager:
             Formatted HTML report.
         """
         title = self._build_subject(report_type, report)
+        hostname = self._resolve_hostname(report)
+        hostname_line = (
+            f"<strong>Hostname:</strong> {hostname}<br>" if hostname else ""
+        )
         sections = [f"<h2>{title}</h2>"]
         sections.append(
-            f"<p><strong>Timestamp:</strong> {self._format_timestamp(report.get('timestamp'))}<br>"
+            f"<p>{hostname_line}"
+            f"<strong>Timestamp:</strong> {self._format_timestamp(report.get('timestamp'))}<br>"
             f"<strong>Severity:</strong> {self._normalize_severity(report.get('severity', 'info'))}</p>"
         )
 
@@ -537,6 +560,45 @@ class NotificationManager:
             return False
 
         return True
+
+    def _apply_network_defaults(self, channel_config: Dict) -> Dict:
+        """Apply shared network defaults to a channel configuration.
+
+        Args:
+            channel_config: Channel-specific configuration.
+
+        Returns:
+            Updated channel configuration.
+        """
+        merged_config = dict(channel_config or {})
+        merged_config.setdefault("only_ipv4", self.only_ipv4)
+        return merged_config
+
+    def _resolve_hostname(self, report: Dict) -> str:
+        """Resolve a hostname for report formatting.
+
+        Args:
+            report: Report payload.
+
+        Returns:
+            Hostname string.
+        """
+        return report.get("hostname") or self.hostname
+
+    @staticmethod
+    def _prepend_hostname(message: str, hostname: str) -> str:
+        """Prepend hostname information to a message body.
+
+        Args:
+            message: Original message.
+            hostname: Hostname value.
+
+        Returns:
+            Message with hostname prefix when available.
+        """
+        if not hostname:
+            return message
+        return f"Hostname: {hostname}\n\n{message}"
 
     def _is_severity_allowed(self, severity: str, min_severity: str) -> bool:
         """Check if severity meets minimum level.

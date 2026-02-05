@@ -30,6 +30,7 @@ from typing import Dict, List, Optional, Tuple
 from urllib import error, request
 
 from .service_manager import ServiceManager
+from .network import force_ipv4
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +171,7 @@ class UpdateChecker:
         self.install_dir = install_dir
         self._interval_seconds = self._get_interval_seconds()
         self._state_cache: Optional[Dict[str, float]] = None
+        self.only_ipv4 = config.get("only_ipv4", False)
 
     def _get_interval_seconds(self) -> int:
         """Return interval in seconds based on configuration."""
@@ -237,8 +239,9 @@ class UpdateChecker:
 
         req = request.Request(url, headers=headers)
         try:
-            with request.urlopen(req, timeout=15) as response:
-                data = json.loads(response.read().decode("utf-8"))
+            with force_ipv4(self.only_ipv4):
+                with request.urlopen(req, timeout=15) as response:
+                    data = json.loads(response.read().decode("utf-8"))
         except error.HTTPError as exc:
             logger.error("GitHub release check failed: %s", exc)
             return None
@@ -332,7 +335,8 @@ class UpdateChecker:
         try:
             with tempfile.TemporaryDirectory() as temp_dir:
                 tarball_path = Path(temp_dir) / "release.tar.gz"
-                request.urlretrieve(tarball_url, tarball_path)
+                with force_ipv4(self.only_ipv4):
+                    request.urlretrieve(tarball_url, tarball_path)
 
                 with tarfile.open(tarball_path, "r:gz") as tar_handle:
                     tar_handle.extractall(path=temp_dir)

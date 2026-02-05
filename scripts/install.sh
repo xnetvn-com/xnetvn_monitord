@@ -157,15 +157,25 @@ copy_files() {
     if [ -f "$CONFIG_DIR/main.yaml" ]; then
         log_warning "Configuration file already exists: $CONFIG_DIR/main.yaml"
         log_warning "Skipping configuration copy to avoid overwriting user changes"
-    elif [ -f "$SCRIPT_DIR/config/main.yaml" ]; then
-        cp "$SCRIPT_DIR/config/main.yaml" "$CONFIG_DIR/"
-        log_info "Configuration file copied"
     elif [ -f "$SCRIPT_DIR/config/main.example.yaml" ]; then
         cp "$SCRIPT_DIR/config/main.example.yaml" "$CONFIG_DIR/main.yaml"
         log_warning "Using example configuration. Please edit $CONFIG_DIR/main.yaml"
+    elif [ -f "$SCRIPT_DIR/config/main.yaml" ]; then
+        cp "$SCRIPT_DIR/config/main.yaml" "$CONFIG_DIR/"
+        log_info "Configuration file copied"
     else
         log_error "No configuration file found"
         exit 1
+    fi
+
+    if [ -f "$CONFIG_DIR/.env" ]; then
+        log_warning "Environment file already exists: $CONFIG_DIR/.env"
+        log_warning "Skipping environment copy to avoid overwriting user changes"
+    elif [ -f "$SCRIPT_DIR/config/.env.example" ]; then
+        cp "$SCRIPT_DIR/config/.env.example" "$CONFIG_DIR/.env"
+        log_warning "Using example environment file. Please edit $CONFIG_DIR/.env"
+    else
+        log_warning "Environment example file not found in repository"
     fi
 
     if [ -f "$SCRIPT_DIR/config/main.example.yaml" ]; then
@@ -201,7 +211,12 @@ set_permissions() {
     log_info "Setting permissions..."
     
     chmod -R 755 "$INSTALL_DIR"
-    chmod 600 "$CONFIG_DIR/main.yaml"
+    if [ -f "$CONFIG_DIR/main.yaml" ]; then
+        chmod 600 "$CONFIG_DIR/main.yaml"
+    fi
+    if [ -f "$CONFIG_DIR/.env" ]; then
+        chmod 600 "$CONFIG_DIR/.env"
+    fi
     chmod -R 755 "$LOG_DIR"
     chmod 644 "$SYSTEMD_SERVICE"
     

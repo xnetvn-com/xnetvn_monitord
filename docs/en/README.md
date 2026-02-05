@@ -38,6 +38,10 @@ Telegram, Slack, Discord, or Webhook.
 - Service check frequency in seconds/minutes/hours.
 - Pre/post recovery notifications with min severity and rate limiting.
 - Email, Telegram, Slack, Discord, and Webhook notifications.
+- Hostname prefix included in notification bodies.
+- IPv4-only outbound option for HTTP checks, notifications, and updates.
+- Telegram topic routing with chat IDs in the format -100XXXX_YYY.
+- Manual update script with backups (scripts/update.sh).
 - Update checker via GitHub Releases with optional auto update.
 - Logging with rotation and PID file support.
 
@@ -77,6 +81,10 @@ Override auto-detection with `XNETVN_SERVICE_MANAGER` (`systemd`, `openrc`, or
 - Dev/test install: see docs/en/INSTALL.md.
 - Other distributions: install manually following INSTALL.md.
 
+Manual update:
+
+- sudo bash scripts/update.sh
+
 ## Configuration
 
 - Default config file: config/main.yaml (see config/main.example.yaml).
@@ -111,8 +119,9 @@ The daemon loads a `.env` file from:
 ```
 
 Use `/opt/xnetvn_monitord/config/.env.example` as a template and copy it to
-`.env` (do not commit secrets). The install script and auto update refresh
-`main.example.yaml` and `.env.example`, but never overwrite `main.yaml` or `.env`.
+`.env` (do not commit secrets). The install script creates `.env` on first
+install with 0600 permissions and refreshes `main.example.yaml` and
+`.env.example` without overwriting `main.yaml` or `.env`.
 
 Define variables via a systemd EnvironmentFile:
 

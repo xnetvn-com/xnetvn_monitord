@@ -23,6 +23,7 @@ This document describes the main configuration blocks in config/main.yaml.
 Primary sections:
 
 - general: application metadata, logging, PID.
+- network: outbound networking defaults.
 - update_checker: GitHub Releases update checks.
 - service_monitor: service configuration (check method, interval, restart).
 - resource_monitor: CPU/Memory/Disk monitoring and recovery.
@@ -34,6 +35,11 @@ Primary sections:
 - check_interval: main loop interval (seconds).
 - logging: level, file, rotation.
 - pid_file, work_dir: PID and runtime directory.
+
+## network
+
+- only_ipv4: when true, outbound DNS resolution and HTTP calls use IPv4 only.
+  This applies to service HTTP checks, notification webhooks, and update checks.
 
 ## update_checker
 
@@ -173,12 +179,15 @@ Global settings:
 - notifications.enabled, min_severity.
 - rate_limit: min_interval, max_per_hour.
 - content_filter: redact_patterns, redact_replacement.
+- Notification bodies include the local hostname at the top of each message.
 
 Each channel (email/telegram/slack/discord/webhook) has:
 
 - enabled, test_on_startup (if supported).
 - min_severity override.
 - rate_limit override (optional).
+- Telegram chat IDs support topic routing with the format -100XXXX_YYY,
+  where YYY is the topic (message_thread_id).
 
 Slack example:
 

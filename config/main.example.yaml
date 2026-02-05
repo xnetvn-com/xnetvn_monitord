@@ -61,6 +61,14 @@ general:
   work_dir: "/opt/xnetvn_monitord"
 
 # =============================================================================
+# NETWORK SETTINGS
+# =============================================================================
+network:
+  # Force outbound connections to use IPv4 only
+  # When true, DNS resolution will only return IPv4 addresses
+  only_ipv4: false
+
+# =============================================================================
 # UPDATE CHECKER CONFIGURATION
 # =============================================================================
 update_checker:
@@ -713,8 +721,8 @@ notifications:
     bot_token: "${TELEGRAM_BOT_TOKEN}"
     # List of chat IDs to receive alerts
     chat_ids:
-      - "${TELEGRAM_CHAT_ID_1}"
       # - "-100XXXX"  # Example group chat ID
+      # - "-100XXXX_YYY"  # Example group chat ID (100XXXX) with Topic ID (YYY)
       # - "123456789" # Example individual chat ID
     # Parse mode: HTML | Markdown
     parse_mode: "HTML"

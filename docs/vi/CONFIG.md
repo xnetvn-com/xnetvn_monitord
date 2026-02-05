@@ -23,6 +23,7 @@ Tài liệu này mô tả các khối cấu hình chính trong config/main.yaml.
 Các khối chính:
 
 - general: thông tin ứng dụng, logging, PID.
+- network: cấu hình mạng outbound.
 - update_checker: kiểm tra cập nhật GitHub Releases.
 - service_monitor: cấu hình dịch vụ (phương thức check, interval, restart).
 - resource_monitor: giám sát CPU/Memory/Disk và recovery.
@@ -34,6 +35,11 @@ Các khối chính:
 - check_interval: chu kỳ vòng lặp chính (giây).
 - logging: level, file, rotation.
 - pid_file, work_dir: PID và thư mục runtime.
+
+## network
+
+- only_ipv4: khi bật, tất cả kết nối outbound chỉ dùng IPv4.
+  Áp dụng cho HTTP checks, webhook notifications và update checks.
 
 ## update_checker
 
@@ -171,12 +177,15 @@ Thông số chung:
 - notifications.enabled, min_severity.
 - rate_limit: min_interval, max_per_hour.
 - content_filter: redact_patterns, redact_replacement.
+- Nội dung thông báo luôn hiển thị hostname ở đầu để nhận biết server.
 
 Mỗi kênh (email/telegram/slack/discord/webhook) có:
 
 - enabled, test_on_startup (nếu có).
 - min_severity (override).
 - rate_limit override (tùy chọn).
+- Telegram chat ID hỗ trợ gửi vào topic theo định dạng -100XXXX_YYY,
+  trong đó YYY là topic (message_thread_id).
 
 Ví dụ Slack:
 

@@ -38,6 +38,10 @@ Webhook.
 - Tần suất kiểm tra dịch vụ theo giây/phút/giờ.
 - Thông báo trước/sau khi khôi phục, có min severity và rate limit.
 - Hỗ trợ Email, Telegram, Slack, Discord, Webhook.
+- Thêm hostname ở đầu thông báo để nhận biết server gửi cảnh báo.
+- Tùy chọn chỉ dùng IPv4 cho kết nối outbound.
+- Telegram hỗ trợ gửi vào topic theo định dạng chat ID -100XXXX_YYY.
+- Script update thủ công có backup (scripts/update.sh).
 - Update checker qua GitHub Releases, tùy chọn auto update.
 - Logging có rotation và PID file.
 
@@ -77,6 +81,10 @@ Có thể override cơ chế auto-detect bằng biến môi trường XNETVN_SER
 - Cài đặt dev/test xem chi tiết tại docs/vi/INSTALL.md.
 - Hệ điều hành khác: cài đặt thủ công theo hướng dẫn trong INSTALL.md.
 
+Cập nhật thủ công:
+
+- sudo bash scripts/update.sh
+
 ## Cấu hình
 
 - Tệp cấu hình mặc định: config/main.yaml (tham khảo config/main.example.yaml).
@@ -111,8 +119,8 @@ Daemon sẽ nạp tệp .env tại:
 ```
 
 Dùng /opt/xnetvn_monitord/config/.env.example làm mẫu và copy sang .env (không
-commit secrets). Script cài đặt và auto update sẽ làm mới main.example.yaml và
-.env.example, nhưng không ghi đè main.yaml hoặc .env.
+commit secrets). Script cài đặt sẽ tạo .env ở lần cài đặt đầu (quyền 0600) và
+làm mới main.example.yaml và .env.example mà không ghi đè main.yaml hoặc .env.
 
 Khai báo biến môi trường qua systemd EnvironmentFile:
 
