@@ -647,6 +647,19 @@ class TestNotificationManagerHelpers:
 
         assert manager._build_subject("event", report) == "Custom Title"
 
+    def test_should_resolve_hostname_from_report(self):
+        """Test report hostname overrides manager hostname."""
+        manager = NotificationManager({"enabled": True})
+        report = {"hostname": "test-host"}
+
+        assert manager._resolve_hostname(report) == "test-host"
+
+    def test_should_prepend_hostname_when_available(self):
+        """Test hostname prefix is added to message body."""
+        message = NotificationManager._prepend_hostname("Body", "test-host")
+
+        assert message.startswith("Hostname: test-host")
+
     def test_should_format_timestamp_when_missing(self):
         """Test missing timestamp returns N/A."""
         manager = NotificationManager({"enabled": True})
@@ -717,6 +730,7 @@ class TestNotificationManagerHelpers:
             "event_type": "resource_recovery",
             "timestamp": 1700000000.0,
             "severity": "high",
+            "hostname": "test-host",
             "resource": {"type": "cpu"},
             "action": {"name": "restart"},
             "details": "Recovered",
@@ -729,6 +743,21 @@ class TestNotificationManagerHelpers:
         assert "Action:" in text
         assert "Details:" in text
         assert "System Stats:" in text
+        assert "Hostname: test-host" in text
+
+    def test_should_format_report_html_with_hostname(self):
+        """Test HTML report formatting includes hostname."""
+        manager = NotificationManager({"enabled": True})
+        report = {
+            "event_type": "resource_recovery",
+            "timestamp": 1700000000.0,
+            "severity": "high",
+            "hostname": "test-host",
+        }
+
+        text = manager._format_report_html("event", report)
+
+        assert "<strong>Hostname:</strong> test-host" in text
 
     def test_should_format_report_html_with_sections(self):
         """Test HTML report formatting includes sections."""

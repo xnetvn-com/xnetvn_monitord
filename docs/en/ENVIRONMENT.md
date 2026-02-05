@@ -24,6 +24,9 @@ ${VAR}. If a variable is missing, the value becomes null.
 The template /opt/xnetvn_monitord/config/.env.example is refreshed on each
 install or upgrade to reflect the latest variables.
 
+On first install, the installer creates /opt/xnetvn_monitord/config/.env from
+the example file if it does not exist and sets permissions to 0600.
+
 ## 2. Required/Recommended Environment Variables
 
 | Variable | Purpose | Required | Notes |

@@ -21,6 +21,7 @@ import logging
 import logging.handlers
 import os
 import signal
+import socket
 import sys
 import time
 from pathlib import Path
@@ -50,6 +51,7 @@ class MonitorDaemon:
         self.config_loader = ConfigLoader(config_path)
         self.config = {}
         self.running = False
+        self.hostname = socket.gethostname()
         self.service_monitor: Optional[ServiceMonitor] = None
         self.resource_monitor: Optional[ResourceMonitor] = None
         self.notification_manager: Optional[NotificationManager] = None
@@ -73,8 +75,12 @@ class MonitorDaemon:
         logger.info(f"Config file: {self.config_path}")
         logger.info("=" * 80)
 
+        network_config = self.config.get("network", {})
+        only_ipv4 = network_config.get("only_ipv4", False)
+
         # Initialize monitors
         service_config = self.config.get("service_monitor", {})
+        service_config.setdefault("only_ipv4", only_ipv4)
         self.service_monitor = ServiceMonitor(service_config)
         logger.info(f"Service monitor initialized (enabled: {service_config.get('enabled', True)})")
 
@@ -84,6 +90,7 @@ class MonitorDaemon:
 
         # Initialize notification manager
         notification_config = self.config.get("notifications", {})
+        notification_config.setdefault("only_ipv4", only_ipv4)
         self.notification_manager = NotificationManager(notification_config)
         enabled_channels = self.notification_manager.get_enabled_channels()
         logger.info(f"Notification manager initialized (channels: {', '.join(enabled_channels) if enabled_channels else 'none'})")
@@ -237,6 +244,7 @@ class MonitorDaemon:
                     "event_type": "service_down",
                     "timestamp": result.get("event_timestamp", time.time()),
                     "severity": "critical" if result.get("critical") else "high",
+                    "hostname": self.hostname,
                     "service": {
                         "name": service_name,
                         "status": "down",
@@ -260,6 +268,7 @@ class MonitorDaemon:
                         "event_type": "service_recovery",
                         "timestamp": action_result.get("timestamp", time.time()),
                         "severity": "info" if restart_success else "high",
+                        "hostname": self.hostname,
                         "service": {
                             "name": service_name,
                             "status": status,
@@ -288,6 +297,7 @@ class MonitorDaemon:
                 "event_type": "resource_threshold",
                 "timestamp": results.get("timestamp", time.time()),
                 "severity": "high",
+                "hostname": self.hostname,
                 "resource": {"type": "cpu", "details": results.get("cpu_load", {})},
                 "details": "CPU load threshold exceeded",
                 "system_stats": self._get_system_stats(),
@@ -300,6 +310,7 @@ class MonitorDaemon:
                 "event_type": "resource_threshold",
                 "timestamp": results.get("timestamp", time.time()),
                 "severity": "high",
+                "hostname": self.hostname,
                 "resource": {"type": "memory", "details": results.get("memory", {})},
                 "details": "Memory threshold exceeded",
                 "system_stats": self._get_system_stats(),
@@ -312,6 +323,7 @@ class MonitorDaemon:
                 "event_type": "resource_threshold",
                 "timestamp": results.get("timestamp", time.time()),
                 "severity": "high",
+                "hostname": self.hostname,
                 "resource": {"type": "disk", "details": results.get("disk", {})},
                 "details": "Disk threshold exceeded",
                 "system_stats": self._get_system_stats(),
@@ -325,6 +337,7 @@ class MonitorDaemon:
                     "event_type": "resource_recovery",
                     "timestamp": action_result.get("timestamp", time.time()),
                     "severity": "info" if action_result.get("success") else "high",
+                    "hostname": self.hostname,
                     "action": action_result,
                     "details": action_result.get("action", "resource_recovery"),
                     "system_stats": self._get_system_stats(),
@@ -375,6 +388,8 @@ class MonitorDaemon:
             # Reinitialize components
             if self.service_monitor:
                 service_config = self.config.get("service_monitor", {})
+                only_ipv4 = self.config.get("network", {}).get("only_ipv4", False)
+                service_config.setdefault("only_ipv4", only_ipv4)
                 self.service_monitor.config = service_config
                 self.service_monitor.enabled = service_config.get("enabled", True)
 
@@ -385,6 +400,8 @@ class MonitorDaemon:
 
             if self.notification_manager:
                 notification_config = self.config.get("notifications", {})
+                only_ipv4 = self.config.get("network", {}).get("only_ipv4", False)
+                notification_config.setdefault("only_ipv4", only_ipv4)
                 self.notification_manager = NotificationManager(notification_config)
 
             if self.service_monitor:
@@ -396,6 +413,8 @@ class MonitorDaemon:
     def _maybe_check_for_updates(self) -> None:
         """Check for updates based on configuration."""
         update_config = self.config.get("update_checker", {})
+        only_ipv4 = self.config.get("network", {}).get("only_ipv4", False)
+        update_config.setdefault("only_ipv4", only_ipv4)
         if not update_config.get("enabled", True):
             logger.info("Update checker is disabled")
             return

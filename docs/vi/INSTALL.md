@@ -30,7 +30,8 @@ Script scripts/install.sh sẽ:
 - Tạo virtual environment tại /opt/xnetvn_monitord/.venv.
 - Cài PyYAML và psutil trong virtual environment.
 - Copy mã nguồn vào /opt/xnetvn_monitord.
-- Copy cấu hình vào /opt/xnetvn_monitord/config/main.yaml.
+- Tạo /opt/xnetvn_monitord/config/main.yaml và /opt/xnetvn_monitord/config/.env
+  từ file mẫu nếu chưa tồn tại, đồng thời set quyền 0600.
 - Luôn làm mới /opt/xnetvn_monitord/config/main.example.yaml và
 	/opt/xnetvn_monitord/config/.env.example (ghi đè file mẫu).
 - Cài systemd unit vào /etc/systemd/system/xnetvn_monitord.service.
@@ -71,7 +72,23 @@ sudo systemctl start xnetvn_monitord
 sudo systemctl status xnetvn_monitord
 ```
 
-## 3. Cài đặt cho môi trường phát triển
+## 3. Cập nhật thủ công
+
+Script scripts/update.sh kiểm tra GitHub Releases và cập nhật phiên bản.
+Script sẽ tạo backup trước khi cập nhật và không ghi đè main.yaml hoặc .env.
+
+```
+sudo bash scripts/update.sh
+```
+
+Tuỳ chọn phổ biến:
+
+```
+sudo bash scripts/update.sh --yes
+sudo bash scripts/update.sh --quiet
+```
+
+## 4. Cài đặt cho môi trường phát triển
 
 ```
 python3 -m venv venv
@@ -85,12 +102,12 @@ Chạy daemon thủ công:
 python3 -m xnetvn_monitord.daemon config/main.yaml
 ```
 
-## 4. Ghi log và PID file
+## 5. Ghi log và PID file
 
 - Log mặc định: /var/log/xnetvn_monitord/monitor.log.
 - PID file mặc định: /var/run/xnetvn_monitord.pid.
 
-## 5. Gỡ cài đặt (thủ công)
+## 6. Gỡ cài đặt (thủ công)
 
 ```
 sudo systemctl stop xnetvn_monitord

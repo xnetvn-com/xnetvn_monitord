@@ -17,6 +17,10 @@
 - 📊 **Comprehensive Monitoring**: CPU, RAM, disk space, and critical services
 - 🌐 **HTTP/HTTPS Health Checks**: Detect connection errors, 4xx/5xx, timeouts, slow responses
 - 📧 **Multi-channel Notifications**: Email, Telegram, Slack, Discord, Webhook
+- 🧭 **Hostname in Alerts**: Prefix notifications with the server hostname
+- 🌐 **IPv4-only Option**: Force outbound HTTP checks and notifications to IPv4
+- 🧵 **Telegram Topics**: Send to topics using chat IDs like `-100XXXX_YYY`
+- ⬆️ **Manual Update Script**: `scripts/update.sh` with backups and confirmation
 - 🔒 **Security First**: Sensitive data filtering, rate limiting, audit logging
 - 🔄 **Flexible Configuration**: Easy YAML config with environment variables support
 - 🛡️ **Production Ready**: Cooldown mechanisms, retry logic, graceful shutdown
@@ -47,6 +51,12 @@ sudo systemctl start xnetvn_monitord
 
 # Check status
 sudo systemctl status xnetvn_monitord
+```
+
+### Manual Update
+
+```bash
+sudo bash scripts/update.sh
 ```
 
 ---
@@ -90,6 +100,8 @@ Use `/opt/xnetvn_monitord/config/.env.example` as a template and copy it to
 The installer and auto-updater refresh `/opt/xnetvn_monitord/config/main.example.yaml`
 and `/opt/xnetvn_monitord/config/.env.example` on each install/upgrade, without
 overwriting `/opt/xnetvn_monitord/config/main.yaml` or `/opt/xnetvn_monitord/config/.env`.
+On first install, the script also creates `/opt/xnetvn_monitord/config/.env`
+with permissions set to 0600 if it does not exist.
 
 You can also use systemd `EnvironmentFile` entries when running via systemd:
 

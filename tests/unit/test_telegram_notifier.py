@@ -16,6 +16,7 @@
 
 import json
 import urllib.error
+import urllib.parse
 
 from xnetvn_monitord.notifiers.telegram_notifier import TelegramNotifier
 
@@ -152,6 +153,29 @@ class TestTelegramNotifierSendMessage:
 
         assert notifier._send_message("1", "message") is False
 
+    def test_should_include_message_thread_id(self, mocker):
+        """Test message thread id is included in send payload."""
+        captured = {}
+
+        def fake_urlopen(request, timeout):
+            captured["data"] = request.data
+            return DummyResponse({"ok": True, "result": {"message_id": 1}})
+
+        mocker.patch("urllib.request.urlopen", side_effect=fake_urlopen)
+
+        notifier = TelegramNotifier(
+            {
+                "enabled": True,
+                "bot_token": "token",
+                "chat_ids": ["1"],
+            }
+        )
+
+        assert notifier._send_message("-100123", "message", 456) is True
+
+        parsed = urllib.parse.parse_qs(captured["data"].decode("utf-8"))
+        assert parsed["message_thread_id"] == ["456"]
+
 
 class TestTelegramNotifierFormatting:
     """Tests for message formatting."""
@@ -232,6 +256,23 @@ class TestTelegramNotifierFormatting:
         assert "b: 1" in result
         assert "- item" in result
         assert "c: 2" in result
+
+
+class TestTelegramNotifierChatTargetParsing:
+    """Tests for chat target parsing."""
+
+    def test_should_parse_chat_target_without_topic(self):
+        """Test chat id without topic id."""
+        assert TelegramNotifier._parse_chat_target("123") == ("123", None)
+
+    def test_should_parse_chat_target_with_topic(self):
+        """Test chat id with topic id."""
+        assert TelegramNotifier._parse_chat_target("-100123_456") == ("-100123", 456)
+
+    def test_should_ignore_invalid_topic_id(self, caplog):
+        """Test invalid topic id returns base id only."""
+        assert TelegramNotifier._parse_chat_target("123_abc") == ("123", None)
+        assert any("Invalid Telegram topic id" in record.message for record in caplog.records)
 
 
 class TestTelegramNotifierConnection:

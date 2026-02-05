@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from xnetvn_monitord.notifiers import NotificationManager
 
 from xnetvn_monitord.utils.service_manager import ServiceManager
+from xnetvn_monitord.utils.network import force_ipv4
 
 
 class ServiceMonitor:
@@ -60,6 +61,7 @@ class ServiceMonitor:
         self._regex_cache: Dict[Tuple[str, ...], List[re.Pattern]] = {}
         self.enabled = config.get("enabled", True)
         self.service_manager = service_manager or ServiceManager()
+        self.only_ipv4 = config.get("only_ipv4", False)
 
     def check_all_services(self) -> List[Dict]:
         """Check all configured services.
@@ -565,32 +567,37 @@ class ServiceMonitor:
 
         start_time = time.monotonic()
         try:
-            with urllib.request.urlopen(request, timeout=timeout_seconds, context=context) as response:
-                status_code = response.getcode()
-                elapsed_ms = (time.monotonic() - start_time) * 1000
+            with force_ipv4(self.only_ipv4):
+                with urllib.request.urlopen(
+                    request,
+                    timeout=timeout_seconds,
+                    context=context,
+                ) as response:
+                    status_code = response.getcode()
+                    elapsed_ms = (time.monotonic() - start_time) * 1000
 
-                if max_response_time_ms and elapsed_ms > max_response_time_ms:
+                    if max_response_time_ms and elapsed_ms > max_response_time_ms:
+                        return {
+                            "running": False,
+                            "message": f"Slow response: {elapsed_ms:.0f}ms",
+                            "status_code": status_code,
+                            "response_time_ms": elapsed_ms,
+                        }
+
+                    if status_code not in expected_codes:
+                        return {
+                            "running": False,
+                            "message": f"Unexpected HTTP status: {status_code}",
+                            "status_code": status_code,
+                            "response_time_ms": elapsed_ms,
+                        }
+
                     return {
-                        "running": False,
-                        "message": f"Slow response: {elapsed_ms:.0f}ms",
+                        "running": True,
+                        "message": f"HTTP {status_code} ({elapsed_ms:.0f}ms)",
                         "status_code": status_code,
                         "response_time_ms": elapsed_ms,
                     }
-
-                if status_code not in expected_codes:
-                    return {
-                        "running": False,
-                        "message": f"Unexpected HTTP status: {status_code}",
-                        "status_code": status_code,
-                        "response_time_ms": elapsed_ms,
-                    }
-
-                return {
-                    "running": True,
-                    "message": f"HTTP {status_code} ({elapsed_ms:.0f}ms)",
-                    "status_code": status_code,
-                    "response_time_ms": elapsed_ms,
-                }
         except urllib.error.HTTPError as e:
             elapsed_ms = (time.monotonic() - start_time) * 1000
             return {

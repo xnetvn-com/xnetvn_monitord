@@ -24,6 +24,8 @@ import urllib.error
 import urllib.request
 from typing import Dict, Optional
 
+from xnetvn_monitord.utils.network import force_ipv4
+
 logger = logging.getLogger(__name__)
 
 
@@ -46,6 +48,7 @@ class SlackNotifier:
         self.timeout = config.get("timeout", 30)
         self.verify_ssl = config.get("verify_ssl", True)
         self.test_on_startup = config.get("test_on_startup", False)
+        self.only_ipv4 = config.get("only_ipv4", False)
 
     def send_notification(self, message: str, payload: Optional[Dict] = None) -> bool:
         """Send a Slack notification message.
@@ -120,14 +123,19 @@ class SlackNotifier:
             if not self.verify_ssl:
                 ssl_context = ssl._create_unverified_context()
 
-            with urllib.request.urlopen(request, timeout=self.timeout, context=ssl_context) as response:
-                status_code = getattr(response, "status", response.getcode())
-                if 200 <= status_code < 300:
-                    logger.debug("Slack notification sent successfully")
-                    return True
+            with force_ipv4(self.only_ipv4):
+                with urllib.request.urlopen(
+                    request,
+                    timeout=self.timeout,
+                    context=ssl_context,
+                ) as response:
+                    status_code = getattr(response, "status", response.getcode())
+                    if 200 <= status_code < 300:
+                        logger.debug("Slack notification sent successfully")
+                        return True
 
-                logger.error("Slack webhook returned status %s", status_code)
-                return False
+                    logger.error("Slack webhook returned status %s", status_code)
+                    return False
 
         except urllib.error.URLError as exc:
             logger.error("Slack URL error: %s", exc)
