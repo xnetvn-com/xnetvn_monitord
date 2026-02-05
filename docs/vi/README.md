@@ -83,7 +83,8 @@ Có thể override cơ chế auto-detect bằng biến môi trường XNETVN_SER
 
 Cập nhật thủ công:
 
-- sudo bash scripts/update.sh
+- sudo bash /opt/xnetvn_monitord/scripts/update.sh
+- Hoặc chạy từ repo: sudo bash scripts/update.sh
 
 ## Cấu hình
 

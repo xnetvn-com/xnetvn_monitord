@@ -83,7 +83,8 @@ Override auto-detection with `XNETVN_SERVICE_MANAGER` (`systemd`, `openrc`, or
 
 Manual update:
 
-- sudo bash scripts/update.sh
+- sudo bash /opt/xnetvn_monitord/scripts/update.sh
+- Or run from the repository clone: sudo bash scripts/update.sh
 
 ## Configuration
 

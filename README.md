@@ -55,8 +55,29 @@ sudo systemctl status xnetvn_monitord
 
 ### Manual Update
 
+Run the installed update script:
+
+```bash
+sudo bash /opt/xnetvn_monitord/scripts/update.sh
+```
+
+Or run from the repository clone:
+
 ```bash
 sudo bash scripts/update.sh
+```
+
+Common flags include:
+
+```bash
+# Simulate the update without making changes (safe test)
+--dry-run
+
+# Skip confirmation prompt
+--yes
+
+# Suppress non-error output
+--quiet
 ```
 
 ---

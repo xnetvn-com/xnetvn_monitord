@@ -74,8 +74,16 @@ sudo systemctl status xnetvn_monitord
 
 ## 3. Cập nhật thủ công
 
-Script scripts/update.sh kiểm tra GitHub Releases và cập nhật phiên bản.
-Script sẽ tạo backup trước khi cập nhật và không ghi đè main.yaml hoặc .env.
+Script `scripts/update.sh` kiểm tra GitHub Releases và áp dụng cập nhật.
+Script sẽ tạo bản sao lưu trước khi cập nhật và không ghi đè `main.yaml` hoặc `.env`.
+
+Chạy script cập nhật đã cài đặt:
+
+```
+sudo bash /opt/xnetvn_monitord/scripts/update.sh
+```
+
+Hoặc chạy từ bản clone của repo:
 
 ```
 sudo bash scripts/update.sh
@@ -84,10 +92,21 @@ sudo bash scripts/update.sh
 Tuỳ chọn phổ biến:
 
 ```
-sudo bash scripts/update.sh --yes
-sudo bash scripts/update.sh --quiet
+# Mô phỏng cập nhật mà không thay đổi hệ thống (an toàn để thử nghiệm)
+--dry-run
+
+# Bỏ qua xác nhận tương tác
+--yes
+
+# Giảm thông tin đầu ra không phải lỗi
+--quiet
 ```
 
+Nếu môi trường của bạn chỉ cho phép kết nối IPv4, sử dụng:
+
+```
+XNETVN_MONITORD_FORCE_IPV4=1 sudo bash /opt/xnetvn_monitord/scripts/update.sh
+```
 ## 4. Cài đặt cho môi trường phát triển
 
 ```

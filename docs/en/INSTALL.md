@@ -77,6 +77,14 @@ sudo systemctl status xnetvn_monitord
 The scripts/update.sh script checks GitHub Releases and applies updates.
 It creates a backup before updating and never overwrites main.yaml or .env.
 
+Run the installed update script:
+
+```
+sudo bash /opt/xnetvn_monitord/scripts/update.sh
+```
+
+Or run from the repository clone:
+
 ```
 sudo bash scripts/update.sh
 ```
@@ -84,10 +92,21 @@ sudo bash scripts/update.sh
 Common flags:
 
 ```
-sudo bash scripts/update.sh --yes
-sudo bash scripts/update.sh --quiet
+# Simulate the update without making any changes (safe for testing)
+--dry-run
+
+# Skip the interactive confirmation prompt
+--yes
+
+# Reduce non-error output
+--quiet
 ```
 
+If your environment requires IPv4-only outbound access, set:
+
+```
+XNETVN_MONITORD_FORCE_IPV4=1 sudo bash /opt/xnetvn_monitord/scripts/update.sh
+```
 ## 4. Development Setup
 
 ```
