@@ -18,7 +18,7 @@ This package provides comprehensive monitoring and automatic recovery
 capabilities for Ubuntu 22 LTS servers.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __author__ = "xNetVN Inc."
 __license__ = "Apache-2.0"
 
