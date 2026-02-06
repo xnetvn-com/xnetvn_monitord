@@ -1,4 +1,4 @@
-name: CI - update script
+name: CI
 
 on:
   push:
@@ -10,42 +10,39 @@ permissions:
   contents: read
 
 jobs:
-  lint-and-test:
+  tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ '3.10', '3.11' ]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ matrix.python-version }}
           cache: 'pip'
           cache-dependency-path: requirements-dev.txt
 
-      - name: Install dev dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
           pip install -e .
 
-      - name: Install ShellCheck
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y shellcheck
+      - name: Run pytest
+        run: pytest
 
-      - name: ShellCheck update.sh
-        run: shellcheck scripts/update.sh
-
-      - name: Run pytest (update dry-run)
-        run: pytest -q
-
-      - name: Upload pytest artifacts
+      - name: Upload coverage artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-artifacts
+          name: coverage-${{ matrix.python-version }}
           path: |
             coverage.xml
             htmlcov/

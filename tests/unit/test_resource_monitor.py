@@ -328,6 +328,7 @@ class TestResourceMonitorDiskCheck:
 
     def test_should_check_multiple_mount_points(self, mocker):
         """Test checking multiple mount points."""
+
         def mock_disk_usage(path):
             usage = mocker.MagicMock()
             if path == "/":
@@ -336,8 +337,8 @@ class TestResourceMonitorDiskCheck:
                 usage.percent = 95.0
             else:
                 usage.percent = 50.0
-            usage.total = 100 * 1024 ** 3
-            usage.used = int(100 * 1024 ** 3 * usage.percent / 100)
+            usage.total = 100 * 1024**3
+            usage.used = int(100 * 1024**3 * usage.percent / 100)
             usage.free = usage.total - usage.used
             return usage
 
@@ -429,9 +430,9 @@ class TestResourceMonitorDiskCheck:
     def test_should_trigger_free_gb_threshold(self, mocker):
         """Test detection of low disk free GB threshold."""
         mock_usage = mocker.MagicMock()
-        mock_usage.total = 100 * 1024 ** 3
-        mock_usage.used = 99 * 1024 ** 3
-        mock_usage.free = 1 * 1024 ** 3
+        mock_usage.total = 100 * 1024**3
+        mock_usage.used = 99 * 1024**3
+        mock_usage.free = 1 * 1024**3
         mock_usage.percent = 99.0
         mocker.patch("psutil.disk_usage", return_value=mock_usage)
         mocker.patch("os.path.exists", return_value=True)
@@ -440,9 +441,7 @@ class TestResourceMonitorDiskCheck:
             "enabled": True,
             "disk": {
                 "enabled": True,
-                "mount_points": [
-                    {"path": "/", "free_gb_threshold": 5.0, "free_percent_threshold": 0.5}
-                ],
+                "mount_points": [{"path": "/", "free_gb_threshold": 5.0, "free_percent_threshold": 0.5}],
             },
         }
 
@@ -558,10 +557,12 @@ class TestResourceMonitorRecoveryActions:
 
     def test_should_restart_services_for_low_memory(self, mocker):
         """Test low memory recovery restarts services."""
-        monitor = ResourceMonitor({
-            "enabled": True,
-            "recovery_actions": {"low_memory_services": ["nginx"]},
-        })
+        monitor = ResourceMonitor(
+            {
+                "enabled": True,
+                "recovery_actions": {"low_memory_services": ["nginx"]},
+            }
+        )
 
         restart_mock = mocker.patch.object(monitor, "_restart_services")
 
@@ -571,10 +572,12 @@ class TestResourceMonitorRecoveryActions:
 
     def test_should_restart_services_for_low_disk(self, mocker):
         """Test low disk recovery restarts services."""
-        monitor = ResourceMonitor({
-            "enabled": True,
-            "recovery_actions": {"low_disk_services": ["mysql"]},
-        })
+        monitor = ResourceMonitor(
+            {
+                "enabled": True,
+                "recovery_actions": {"low_disk_services": ["mysql"]},
+            }
+        )
 
         restart_mock = mocker.patch.object(monitor, "_restart_services")
 
@@ -605,8 +608,8 @@ class TestResourceMonitorIntegration:
         """Test that complete results dictionary is returned."""
         mocker.patch("os.getloadavg", return_value=(5.0, 4.0, 3.0))
         mock_mem = mocker.MagicMock()
-        mock_mem.total = 8 * 1024 ** 3
-        mock_mem.available = 2 * 1024 ** 3
+        mock_mem.total = 8 * 1024**3
+        mock_mem.available = 2 * 1024**3
         mock_mem.percent = 75.0
         mocker.patch("psutil.virtual_memory", return_value=mock_mem)
 
@@ -683,9 +686,9 @@ class TestResourceMonitorIntegration:
         mocker.patch("os.path.exists", return_value=True)
 
         mock_usage = mocker.MagicMock()
-        mock_usage.total = 100 * 1024 ** 3
-        mock_usage.used = 60 * 1024 ** 3
-        mock_usage.free = 40 * 1024 ** 3
+        mock_usage.total = 100 * 1024**3
+        mock_usage.used = 60 * 1024**3
+        mock_usage.free = 40 * 1024**3
         mock_usage.percent = 60.0
         mocker.patch("psutil.disk_usage", return_value=mock_usage)
 
@@ -718,18 +721,8 @@ class TestResourceMonitorIntegration:
 
         assert monitor._evaluate_action_success({"recovery_command_success": True}) is True
         assert monitor._evaluate_action_success({"recovery_command_success": False}) is False
-        assert (
-            monitor._evaluate_action_success(
-                {"services": [{"success": True}, {"success": True}]}
-            )
-            is True
-        )
-        assert (
-            monitor._evaluate_action_success(
-                {"services": [{"success": True}, {"success": False}]}
-            )
-            is False
-        )
+        assert monitor._evaluate_action_success({"services": [{"success": True}, {"success": True}]}) is True
+        assert monitor._evaluate_action_success({"services": [{"success": True}, {"success": False}]}) is False
 
     def test_should_handle_errors_in_get_current_stats(self, mocker):
         """Test error handling in get_current_stats."""
@@ -837,9 +830,7 @@ class TestResourceMonitorAdditionalCoverage:
         mocker.patch("psutil.virtual_memory", return_value=mock_mem)
 
         monitor = ResourceMonitor({"enabled": True})
-        result = monitor._check_memory(
-            {"free_percent_threshold": 5.0, "free_mb_threshold": 512, "condition": "or"}
-        )
+        result = monitor._check_memory({"free_percent_threshold": 5.0, "free_mb_threshold": 512, "condition": "or"})
 
         assert result["threshold_exceeded"] is True
         assert result["exceeded_type"] == "both"
@@ -853,9 +844,7 @@ class TestResourceMonitorAdditionalCoverage:
         mocker.patch("psutil.virtual_memory", return_value=mock_mem)
 
         monitor = ResourceMonitor({"enabled": True})
-        result = monitor._check_memory(
-            {"free_percent_threshold": 5.0, "free_mb_threshold": 512, "condition": "or"}
-        )
+        result = monitor._check_memory({"free_percent_threshold": 5.0, "free_mb_threshold": 512, "condition": "or"})
 
         assert result["threshold_exceeded"] is True
         assert result["exceeded_type"] == "mb"

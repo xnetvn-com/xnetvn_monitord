@@ -27,8 +27,8 @@ class TestConfigurationIntegration:
 
     def test_should_load_and_apply_service_config(self, config_file):
         """Test loading and applying service monitor configuration."""
-        from xnetvn_monitord.utils.config_loader import ConfigLoader
         from xnetvn_monitord.monitors.service_monitor import ServiceMonitor
+        from xnetvn_monitord.utils.config_loader import ConfigLoader
 
         loader = ConfigLoader(str(config_file))
         config = loader.load()
@@ -41,8 +41,8 @@ class TestConfigurationIntegration:
 
     def test_should_load_and_apply_notification_config(self, config_file):
         """Test loading and applying notification configuration."""
-        from xnetvn_monitord.utils.config_loader import ConfigLoader
         from xnetvn_monitord.notifiers import NotificationManager
+        from xnetvn_monitord.utils.config_loader import ConfigLoader
 
         loader = ConfigLoader(str(config_file))
         config = loader.load()
@@ -59,14 +59,12 @@ class TestMonitoringWorkflow:
 
     def test_should_detect_and_notify_service_failure(self, mocker, config_file):
         """Test end-to-end service failure detection and notification."""
-        from xnetvn_monitord.utils.config_loader import ConfigLoader
         from xnetvn_monitord.monitors.service_monitor import ServiceMonitor
         from xnetvn_monitord.notifiers import NotificationManager
+        from xnetvn_monitord.utils.config_loader import ConfigLoader
 
         # Mock service as failed
-        mocker.patch("subprocess.run", return_value=mocker.MagicMock(
-            returncode=3, stdout="inactive\n"
-        ))
+        mocker.patch("subprocess.run", return_value=mocker.MagicMock(returncode=3, stdout="inactive\n"))
 
         loader = ConfigLoader(str(config_file))
         config = loader.load()

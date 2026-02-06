@@ -70,9 +70,7 @@ class TestWebhookNotifier:
         mocker.patch("urllib.request.Request", side_effect=fake_request)
         mocker.patch("urllib.request.urlopen", return_value=DummyResponse())
 
-        notifier = WebhookNotifier(
-            {"enabled": True, "urls": ["https://example.com"], "headers": {"X-Base": "1"}}
-        )
+        notifier = WebhookNotifier({"enabled": True, "urls": ["https://example.com"], "headers": {"X-Base": "1"}})
 
         assert notifier.send_notification({"event": "test"}, extra_headers={"X-Extra": "2"})
         assert headers_seen[0]["X-Base"] == "1"
@@ -85,9 +83,7 @@ class TestWebhookNotifier:
             side_effect=[DummyResponse(status=500), DummyResponse(status=204)],
         )
 
-        notifier = WebhookNotifier(
-            {"enabled": True, "urls": ["https://one.example", "https://two.example"]}
-        )
+        notifier = WebhookNotifier({"enabled": True, "urls": ["https://one.example", "https://two.example"]})
 
         assert notifier.send_notification({"event": "test"}) is True
 
@@ -152,8 +148,6 @@ class TestWebhookNotifier:
         """Test send_notification returns False when all endpoints fail."""
         mocker.patch("urllib.request.urlopen", return_value=DummyResponse(status=500))
 
-        notifier = WebhookNotifier(
-            {"enabled": True, "urls": ["https://one.example", "https://two.example"]}
-        )
+        notifier = WebhookNotifier({"enabled": True, "urls": ["https://one.example", "https://two.example"]})
 
         assert notifier.send_notification({"event": "test"}) is False

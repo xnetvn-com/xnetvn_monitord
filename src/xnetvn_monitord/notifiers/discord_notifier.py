@@ -109,9 +109,7 @@ class DiscordNotifier:
         try:
             data = json.dumps(payload).encode("utf-8")
             headers = {"Content-Type": "application/json"}
-            request = urllib.request.Request(
-                self.webhook_url, data=data, headers=headers, method="POST"
-            )
+            request = urllib.request.Request(self.webhook_url, data=data, headers=headers, method="POST")
 
             ssl_context = None
             if not self.verify_ssl:

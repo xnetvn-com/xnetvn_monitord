@@ -349,30 +349,14 @@ def pytest_configure(config):
     Args:
         config: Pytest configuration object.
     """
-    config.addinivalue_line(
-        "markers", "unit: Unit tests (fast, isolated)"
-    )
-    config.addinivalue_line(
-        "markers", "integration: Integration tests (slower, multiple components)"
-    )
-    config.addinivalue_line(
-        "markers", "e2e: End-to-end tests (slowest, full workflow)"
-    )
-    config.addinivalue_line(
-        "markers", "performance: Performance and benchmark tests"
-    )
-    config.addinivalue_line(
-        "markers", "security: Security-focused tests"
-    )
-    config.addinivalue_line(
-        "markers", "slow: Tests that take more than 1 second"
-    )
-    config.addinivalue_line(
-        "markers", "requires_root: Tests that require root privileges"
-    )
-    config.addinivalue_line(
-        "markers", "requires_network: Tests that require network access"
-    )
+    config.addinivalue_line("markers", "unit: Unit tests (fast, isolated)")
+    config.addinivalue_line("markers", "integration: Integration tests (slower, multiple components)")
+    config.addinivalue_line("markers", "e2e: End-to-end tests (slowest, full workflow)")
+    config.addinivalue_line("markers", "performance: Performance and benchmark tests")
+    config.addinivalue_line("markers", "security: Security-focused tests")
+    config.addinivalue_line("markers", "slow: Tests that take more than 1 second")
+    config.addinivalue_line("markers", "requires_root: Tests that require root privileges")
+    config.addinivalue_line("markers", "requires_network: Tests that require network access")
 
 
 def pytest_collection_modifyitems(config, items):

@@ -47,16 +47,12 @@ class TestTelegramNotifierSendNotification:
 
     def test_should_return_false_when_missing_token(self):
         """Test missing token returns False."""
-        notifier = TelegramNotifier(
-            {"enabled": True, "bot_token": "", "chat_ids": ["1"]}
-        )
+        notifier = TelegramNotifier({"enabled": True, "bot_token": "", "chat_ids": ["1"]})
         assert notifier.send_notification("message") is False
 
     def test_should_return_false_when_no_chat_ids(self):
         """Test missing chat IDs returns False."""
-        notifier = TelegramNotifier(
-            {"enabled": True, "bot_token": "token", "chat_ids": []}
-        )
+        notifier = TelegramNotifier({"enabled": True, "bot_token": "token", "chat_ids": []})
         assert notifier.send_notification("message") is False
 
     def test_should_send_to_multiple_chat_ids(self, mocker):
@@ -182,9 +178,7 @@ class TestTelegramNotifierFormatting:
 
     def test_should_escape_html(self):
         """Test HTML escaping."""
-        notifier = TelegramNotifier(
-            {"enabled": True, "bot_token": "token", "chat_ids": ["1"]}
-        )
+        notifier = TelegramNotifier({"enabled": True, "bot_token": "token", "chat_ids": ["1"]})
         assert notifier._escape_html("<tag>&") == "&lt;tag&gt;&amp;"
 
     def test_should_format_service_alert_html(self):
@@ -245,9 +239,7 @@ class TestTelegramNotifierFormatting:
 
     def test_should_convert_nested_dict_to_string(self):
         """Test dictionary formatting handles nested structures."""
-        notifier = TelegramNotifier(
-            {"enabled": True, "bot_token": "token", "chat_ids": ["1"]}
-        )
+        notifier = TelegramNotifier({"enabled": True, "bot_token": "token", "chat_ids": ["1"]})
 
         data = {"a": {"b": 1}, "list": ["item", {"c": 2}]}
         result = notifier._dict_to_string(data)
@@ -285,9 +277,7 @@ class TestTelegramNotifierConnection:
 
     def test_should_return_false_when_missing_token(self):
         """Test missing token returns False for connection test."""
-        notifier = TelegramNotifier(
-            {"enabled": True, "bot_token": "", "chat_ids": ["1"]}
-        )
+        notifier = TelegramNotifier({"enabled": True, "bot_token": "", "chat_ids": ["1"]})
         assert notifier.test_connection() is False
 
     def test_should_return_true_on_success(self, mocker):
@@ -297,9 +287,7 @@ class TestTelegramNotifierConnection:
             return_value=DummyResponse({"ok": True, "result": {"username": "bot"}}),
         )
 
-        notifier = TelegramNotifier(
-            {"enabled": True, "bot_token": "token", "chat_ids": ["1"]}
-        )
+        notifier = TelegramNotifier({"enabled": True, "bot_token": "token", "chat_ids": ["1"]})
 
         assert notifier.test_connection() is True
 
@@ -310,8 +298,6 @@ class TestTelegramNotifierConnection:
             return_value=DummyResponse({"ok": False, "description": "fail"}),
         )
 
-        notifier = TelegramNotifier(
-            {"enabled": True, "bot_token": "token", "chat_ids": ["1"]}
-        )
+        notifier = TelegramNotifier({"enabled": True, "bot_token": "token", "chat_ids": ["1"]})
 
         assert notifier.test_connection() is False

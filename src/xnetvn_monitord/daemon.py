@@ -33,9 +33,7 @@ from .utils import ConfigLoader, UpdateChecker, load_env_file
 
 logger = logging.getLogger(__name__)
 
-UPDATE_CONFIG_DOC_URL = (
-    "https://github.com/xnetvn-com/xnetvn_monitord/blob/main/docs/vi/ENVIRONMENT.md"
-)
+UPDATE_CONFIG_DOC_URL = "https://github.com/xnetvn-com/xnetvn_monitord/blob/main/docs/vi/ENVIRONMENT.md"
 
 
 class MonitorDaemon:
@@ -93,7 +91,9 @@ class MonitorDaemon:
         notification_config.setdefault("only_ipv4", only_ipv4)
         self.notification_manager = NotificationManager(notification_config)
         enabled_channels = self.notification_manager.get_enabled_channels()
-        logger.info(f"Notification manager initialized (channels: {', '.join(enabled_channels) if enabled_channels else 'none'})")
+        logger.info(
+            f"Notification manager initialized (channels: {', '.join(enabled_channels) if enabled_channels else 'none'})"
+        )
 
         if self.service_monitor:
             self.service_monitor.notification_manager = self.notification_manager
@@ -137,11 +137,7 @@ class MonitorDaemon:
         max_bytes = log_config.get("max_size_mb", 100) * 1024 * 1024
         backup_count = log_config.get("backup_count", 10)
 
-        file_handler = logging.handlers.RotatingFileHandler(
-            log_file,
-            maxBytes=max_bytes,
-            backupCount=backup_count
-        )
+        file_handler = logging.handlers.RotatingFileHandler(log_file, maxBytes=max_bytes, backupCount=backup_count)
         file_handler.setLevel(log_level)
         file_handler.setFormatter(logging.Formatter(log_format))
 
@@ -218,7 +214,9 @@ class MonitorDaemon:
                     logger.debug(f"Monitoring cycle completed in {cycle_duration:.2f}s, sleeping for {sleep_time:.2f}s")
                     time.sleep(sleep_time)
                 else:
-                    logger.warning(f"Monitoring cycle took {cycle_duration:.2f}s, exceeding interval of {check_interval}s")
+                    logger.warning(
+                        f"Monitoring cycle took {cycle_duration:.2f}s, exceeding interval of {check_interval}s"
+                    )
 
         except KeyboardInterrupt:
             logger.info("Received keyboard interrupt, shutting down...")
@@ -441,10 +439,7 @@ class MonitorDaemon:
                 ]
                 if result.release_url:
                     message_lines.append(f"Release notes: {result.release_url}")
-                message_lines.append(
-                    "Review configuration changes: "
-                    f"{UPDATE_CONFIG_DOC_URL}"
-                )
+                message_lines.append("Review configuration changes: " f"{UPDATE_CONFIG_DOC_URL}")
                 message = "\n".join(message_lines)
                 self.notification_manager.notify_custom_message(
                     subject="xnetvn_monitord update available",
@@ -454,9 +449,7 @@ class MonitorDaemon:
             if update_config.get("auto_update", False) and result.tarball_url:
                 logger.warning("Auto update is enabled; applying update...")
                 if checker.apply_update(result.tarball_url):
-                    service_name = update_config.get(
-                        "service_name", "xnetvn_monitord"
-                    )
+                    service_name = update_config.get("service_name", "xnetvn_monitord")
                     checker.restart_service(service_name)
         else:
             logger.info("Update check completed: %s", result.message)

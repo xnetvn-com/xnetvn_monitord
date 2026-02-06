@@ -91,9 +91,7 @@ class NotificationManager:
         # Rate limiting tracking
         self.notification_history: Dict[str, List[float]] = {}
 
-    def notify_service_failure(
-        self, service_name: str, status: str, details: str
-    ) -> bool:
+    def notify_service_failure(self, service_name: str, status: str, details: str) -> bool:
         """Send legacy notification about service failure.
 
         Args:
@@ -189,27 +187,21 @@ class NotificationManager:
 
         if self.telegram_notifier:
             try:
-                if self.telegram_notifier.send_notification(
-                    f"{message_with_host}\n\n{subject}"
-                ):
+                if self.telegram_notifier.send_notification(f"{message_with_host}\n\n{subject}"):
                     success = True
             except Exception as e:
                 logger.error(f"Error sending Telegram notification: {str(e)}")
 
         if self.slack_notifier:
             try:
-                if self.slack_notifier.send_notification(
-                    f"{message_with_host}\n\n{subject}"
-                ):
+                if self.slack_notifier.send_notification(f"{message_with_host}\n\n{subject}"):
                     success = True
             except Exception as e:
                 logger.error(f"Error sending Slack notification: {str(e)}")
 
         if self.discord_notifier:
             try:
-                if self.discord_notifier.send_notification(
-                    f"{message_with_host}\n\n{subject}"
-                ):
+                if self.discord_notifier.send_notification(f"{message_with_host}\n\n{subject}"):
                     success = True
             except Exception as e:
                 logger.error(f"Error sending Discord notification: {str(e)}")
@@ -319,9 +311,7 @@ class NotificationManager:
         if self.telegram_notifier:
             if self._should_send_to_channel("telegram", severity, notification_key):
                 try:
-                    event_data = self._prepare_report_for_channel(
-                        report, self.config.get("telegram", {})
-                    )
+                    event_data = self._prepare_report_for_channel(report, self.config.get("telegram", {}))
                     message = self._format_report_plain(report_type, event_data)
                     message = self._filter_sensitive_content(message)
                     if self.telegram_notifier.send_notification(message):
@@ -333,9 +323,7 @@ class NotificationManager:
         if self.slack_notifier:
             if self._should_send_to_channel("slack", severity, notification_key):
                 try:
-                    event_data = self._prepare_report_for_channel(
-                        report, self.config.get("slack", {})
-                    )
+                    event_data = self._prepare_report_for_channel(report, self.config.get("slack", {}))
                     message = self._format_report_plain(report_type, event_data)
                     message = self._filter_sensitive_content(message)
                     if self.slack_notifier.send_notification(message):
@@ -347,9 +335,7 @@ class NotificationManager:
         if self.discord_notifier:
             if self._should_send_to_channel("discord", severity, notification_key):
                 try:
-                    event_data = self._prepare_report_for_channel(
-                        report, self.config.get("discord", {})
-                    )
+                    event_data = self._prepare_report_for_channel(report, self.config.get("discord", {}))
                     message = self._format_report_plain(report_type, event_data)
                     message = self._filter_sensitive_content(message)
                     if self.discord_notifier.send_notification(message):
@@ -474,9 +460,7 @@ class NotificationManager:
         """
         title = self._build_subject(report_type, report)
         hostname = self._resolve_hostname(report)
-        hostname_line = (
-            f"<strong>Hostname:</strong> {hostname}<br>" if hostname else ""
-        )
+        hostname_line = f"<strong>Hostname:</strong> {hostname}<br>" if hostname else ""
         sections = [f"<h2>{title}</h2>"]
         sections.append(
             f"<p>{hostname_line}"
@@ -502,9 +486,7 @@ class NotificationManager:
 
         if report.get("system_stats"):
             sections.append("<h3>System Stats</h3>")
-            sections.append(
-                f"<pre>{self._dict_to_string(report.get('system_stats', {}), indent=1)}</pre>"
-            )
+            sections.append(f"<pre>{self._dict_to_string(report.get('system_stats', {}), indent=1)}</pre>")
 
         return "\n".join(sections).strip()
 
@@ -532,9 +514,7 @@ class NotificationManager:
         """
         return str(severity or "info").lower()
 
-    def _should_send_to_channel(
-        self, channel_name: str, severity: str, notification_key: str
-    ) -> bool:
+    def _should_send_to_channel(self, channel_name: str, severity: str, notification_key: str) -> bool:
         """Determine if a channel should receive a notification.
 
         Args:
@@ -546,9 +526,7 @@ class NotificationManager:
             True if channel should receive notification, False otherwise.
         """
         channel_config = self.config.get(channel_name, {})
-        min_severity = self._normalize_severity(
-            channel_config.get("min_severity", self.default_min_severity)
-        )
+        min_severity = self._normalize_severity(channel_config.get("min_severity", self.default_min_severity))
 
         if not self._is_severity_allowed(severity, min_severity):
             return False
@@ -658,12 +636,7 @@ class NotificationManager:
         filtered_content = content
         for pattern in redact_patterns:
             try:
-                filtered_content = re.sub(
-                    pattern,
-                    redact_replacement,
-                    filtered_content,
-                    flags=re.IGNORECASE
-                )
+                filtered_content = re.sub(pattern, redact_replacement, filtered_content, flags=re.IGNORECASE)
             except Exception as e:
                 logger.warning(f"Error applying content filter pattern '{pattern}': {str(e)}")
 
