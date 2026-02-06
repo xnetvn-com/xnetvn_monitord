@@ -38,7 +38,7 @@ jobs:
         run: shellcheck scripts/update.sh
 
       - name: Run pytest (update dry-run)
-        run: pytest -q tests/test_update_dry_run.py
+        run: pytest -q
 
       - name: Upload pytest artifacts
         if: always()
