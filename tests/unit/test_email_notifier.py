@@ -215,9 +215,7 @@ class TestEmailNotifierConnection:
         smtp_instance = mocker.Mock()
         mocker.patch("smtplib.SMTP", return_value=smtp_instance)
 
-        notifier = EmailNotifier(
-            {"enabled": True, "smtp": {"host": "localhost", "port": 25}}
-        )
+        notifier = EmailNotifier({"enabled": True, "smtp": {"host": "localhost", "port": 25}})
 
         assert notifier.test_connection() is True
         smtp_instance.ehlo.assert_called_once()
@@ -243,8 +241,6 @@ class TestEmailNotifierConnection:
         """Test SMTP connection failure handling."""
         mocker.patch("smtplib.SMTP", side_effect=smtplib.SMTPException("fail"))
 
-        notifier = EmailNotifier(
-            {"enabled": True, "smtp": {"host": "localhost", "port": 25}}
-        )
+        notifier = EmailNotifier({"enabled": True, "smtp": {"host": "localhost", "port": 25}})
 
         assert notifier.test_connection() is False

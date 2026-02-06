@@ -18,10 +18,14 @@ def test_update_dry_run(tmp_path):
 
     test_release = "v9.9.9\nhttps://example.com/dummy.tar.gz\nhttps://example.com/release"
 
-    env = dict(**{**{k: v for k, v in __import__('os').environ.items()}, 'XNETVN_MONITORD_TEST_LATEST_RELEASE': test_release})
+    env = dict(
+        **{**{k: v for k, v in __import__("os").environ.items()}, "XNETVN_MONITORD_TEST_LATEST_RELEASE": test_release}
+    )
 
     # Execute the script in dry-run mode with injected environment
-    proc = subprocess.run(["bash", str(orig), "--install-dir", str(install_dir), "--dry-run"], capture_output=True, text=True, env=env)
+    proc = subprocess.run(
+        ["bash", str(orig), "--install-dir", str(install_dir), "--dry-run"], capture_output=True, text=True, env=env
+    )
 
     # Debug output on failure
     if proc.returncode != 0:

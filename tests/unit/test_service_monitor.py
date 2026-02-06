@@ -166,9 +166,7 @@ class TestServiceMonitorSystemctlCheck:
 
     def test_should_use_systemctl_pattern_when_configured(self, mocker):
         """Test systemctl check uses pattern matcher when provided."""
-        mock_pattern = mocker.patch.object(
-            ServiceMonitor, "_check_systemctl_pattern", return_value=True
-        )
+        mock_pattern = mocker.patch.object(ServiceMonitor, "_check_systemctl_pattern", return_value=True)
 
         monitor = ServiceMonitor({"enabled": True})
         service_config = {
@@ -247,9 +245,7 @@ class TestServiceMonitorProcessCheck:
     def test_should_handle_multiple_processes_same_name(self, mocker):
         """Test handling when multiple processes have the same name."""
         mock_run = mocker.patch("subprocess.run")
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout="1234\n5678\n9012\n3456\n"
-        )
+        mock_run.return_value = MagicMock(returncode=0, stdout="1234\n5678\n9012\n3456\n")
 
         config = {"enabled": True}
         monitor = ServiceMonitor(config)
@@ -283,10 +279,7 @@ class TestServiceMonitorProcessRegexCheck:
         # Mock ps aux output with matching process
         mock_run.return_value = MagicMock(
             returncode=0,
-            stdout=(
-                "root     1234  0.0  0.1  12345  6789 ?  Ss   10:00   0:00 "
-                "php-fpm: master process\n"
-            ),
+            stdout=("root     1234  0.0  0.1  12345  6789 ?  Ss   10:00   0:00 " "php-fpm: master process\n"),
         )
 
         config = {"enabled": True}
@@ -508,9 +501,7 @@ class TestServiceMonitorCustomCommandCheck:
     def test_should_handle_custom_command_timeout(self, mocker):
         """Test handling of custom command timeout."""
         mock_run = mocker.patch("subprocess.run")
-        mock_run.side_effect = subprocess.TimeoutExpired(
-            cmd="/usr/local/bin/check_service.sh", timeout=30
-        )
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd="/usr/local/bin/check_service.sh", timeout=30)
 
         config = {"enabled": True}
         monitor = ServiceMonitor(config)
@@ -586,9 +577,7 @@ class TestServiceMonitorIptablesCheck:
 
     def test_should_delegate_to_custom_command_when_override_present(self, mocker):
         """Test iptables check uses custom command when provided."""
-        mock_custom = mocker.patch.object(
-            ServiceMonitor, "_check_custom_command", return_value=True
-        )
+        mock_custom = mocker.patch.object(ServiceMonitor, "_check_custom_command", return_value=True)
 
         monitor = ServiceMonitor({"enabled": True})
         service_config = {
@@ -977,9 +966,7 @@ class TestServiceMonitorCheckService:
             return_value={"running": True, "message": "OK"},
         )
 
-        status = monitor._check_service(
-            {"name": "api", "check_method": "http", "url": "http://example"}
-        )
+        status = monitor._check_service({"name": "api", "check_method": "http", "url": "http://example"})
 
         assert status["running"] is True
         assert status["message"] == "OK"
@@ -994,9 +981,7 @@ class TestServiceMonitorCheckService:
             side_effect=RuntimeError("boom"),
         )
 
-        status = monitor._check_service(
-            {"name": "nginx", "check_method": "systemctl", "service_name": "nginx"}
-        )
+        status = monitor._check_service({"name": "nginx", "check_method": "systemctl", "service_name": "nginx"})
 
         assert status["running"] is False
         assert status["message"].startswith("Check error:")
@@ -1097,9 +1082,7 @@ class TestServiceMonitorActionReadiness:
     def test_should_block_action_when_service_restarting_with_mock(self, mocker):
         """Test readiness fails when _check_systemd_state reports restarting."""
         monitor = ServiceMonitor({"enabled": True})
-        mocker.patch.object(
-            ServiceMonitor, "_check_systemd_state", return_value=(True, True)
-        )
+        mocker.patch.object(ServiceMonitor, "_check_systemd_state", return_value=(True, True))
 
         ready, reason = monitor._check_action_readiness({"service_name": "nginx"})
 
@@ -1185,11 +1168,7 @@ class TestServiceMonitorSystemdState:
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value = MagicMock(
             returncode=0,
-            stdout=(
-                "LoadState=loaded\n"
-                "ActiveState=activating\n"
-                "SubState=auto-restart\n"
-            ),
+            stdout=("LoadState=loaded\n" "ActiveState=activating\n" "SubState=auto-restart\n"),
         )
 
         monitor = ServiceMonitor({"enabled": True})
@@ -1234,9 +1213,7 @@ class TestServiceMonitorRestartLogic:
         mock_systemctl_check = mocker.patch.object(ServiceMonitor, "_check_systemctl")
         mock_systemctl_check.return_value = False
 
-        mocker.patch.object(
-            ServiceMonitor, "_check_action_readiness", return_value=(True, "Action allowed")
-        )
+        mocker.patch.object(ServiceMonitor, "_check_action_readiness", return_value=(True, "Action allowed"))
 
         mock_restart = mocker.patch.object(ServiceMonitor, "_restart_service")
         mock_restart.return_value = True
@@ -1266,9 +1243,7 @@ class TestServiceMonitorRestartLogic:
         mock_systemctl_check = mocker.patch.object(ServiceMonitor, "_check_systemctl")
         mock_systemctl_check.return_value = False
 
-        mocker.patch.object(
-            ServiceMonitor, "_check_action_readiness", return_value=(True, "Action allowed")
-        )
+        mocker.patch.object(ServiceMonitor, "_check_action_readiness", return_value=(True, "Action allowed"))
 
         mock_restart = mocker.patch.object(ServiceMonitor, "_restart_service")
 
@@ -1295,9 +1270,7 @@ class TestServiceMonitorRestartLogic:
         mock_restart = mocker.patch.object(ServiceMonitor, "_restart_service")
         mock_restart.return_value = True
 
-        mocker.patch.object(
-            ServiceMonitor, "_check_action_readiness", return_value=(True, "Action allowed")
-        )
+        mocker.patch.object(ServiceMonitor, "_check_action_readiness", return_value=(True, "Action allowed"))
 
         config = {
             "enabled": True,
@@ -1328,9 +1301,7 @@ class TestServiceMonitorRestartLogic:
         mock_restart = mocker.patch.object(ServiceMonitor, "_restart_service")
         mock_restart.return_value = True
 
-        mocker.patch.object(
-            ServiceMonitor, "_check_action_readiness", return_value=(True, "Action allowed")
-        )
+        mocker.patch.object(ServiceMonitor, "_check_action_readiness", return_value=(True, "Action allowed"))
 
         config = {
             "enabled": True,
@@ -1361,9 +1332,7 @@ class TestServiceMonitorRestartLogic:
         mock_restart = mocker.patch.object(ServiceMonitor, "_restart_service")
         mock_restart.return_value = True
 
-        mocker.patch.object(
-            ServiceMonitor, "_check_action_readiness", return_value=(True, "Action allowed")
-        )
+        mocker.patch.object(ServiceMonitor, "_check_action_readiness", return_value=(True, "Action allowed"))
 
         config = {
             "enabled": True,
@@ -1388,9 +1357,7 @@ class TestServiceMonitorRestartLogic:
         mock_restart = mocker.patch.object(ServiceMonitor, "_restart_service")
         mock_restart.return_value = False  # Restart fails
 
-        mocker.patch.object(
-            ServiceMonitor, "_check_action_readiness", return_value=(True, "Action allowed")
-        )
+        mocker.patch.object(ServiceMonitor, "_check_action_readiness", return_value=(True, "Action allowed"))
 
         config = {
             "enabled": True,
@@ -1512,9 +1479,7 @@ class TestServiceMonitorFailureHandling:
         """Test failure handling returns recovery_blocked when not ready."""
         monitor = ServiceMonitor({"enabled": True, "action_on_failure": "restart"})
         mocker.patch.object(ServiceMonitor, "_check_action_cooldown", return_value=True)
-        mocker.patch.object(
-            ServiceMonitor, "_check_action_readiness", return_value=(False, "Service not found")
-        )
+        mocker.patch.object(ServiceMonitor, "_check_action_readiness", return_value=(False, "Service not found"))
 
         result = monitor._handle_service_failure({"name": "nginx"}, {"message": "down"})
 
@@ -1525,9 +1490,7 @@ class TestServiceMonitorFailureHandling:
         """Test failure handling returns action result on restart success."""
         monitor = ServiceMonitor({"enabled": True, "action_on_failure": "restart"})
         mocker.patch.object(ServiceMonitor, "_check_action_cooldown", return_value=True)
-        mocker.patch.object(
-            ServiceMonitor, "_check_action_readiness", return_value=(True, "Action allowed")
-        )
+        mocker.patch.object(ServiceMonitor, "_check_action_readiness", return_value=(True, "Action allowed"))
         mocker.patch.object(ServiceMonitor, "_check_restart_attempts", return_value=True)
         mocker.patch.object(ServiceMonitor, "_check_cooldown", return_value=True)
         mocker.patch.object(ServiceMonitor, "_restart_service", return_value=True)

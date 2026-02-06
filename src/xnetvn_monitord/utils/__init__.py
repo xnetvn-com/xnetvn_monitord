@@ -16,8 +16,8 @@
 
 from .config_loader import ConfigLoader
 from .env_loader import load_env_file
+from .network import force_ipv4
 from .service_manager import ServiceManager
 from .update_checker import UpdateChecker
-from .network import force_ipv4
 
 __all__ = ["ConfigLoader", "ServiceManager", "UpdateChecker", "force_ipv4", "load_env_file"]

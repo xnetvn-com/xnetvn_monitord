@@ -66,10 +66,12 @@ class TestNotificationManagerRateLimit:
 
     def test_should_allow_when_rate_limit_disabled(self):
         """Test rate limit bypass when disabled."""
-        manager = NotificationManager({
-            "enabled": True,
-            "rate_limit": {"enabled": False},
-        })
+        manager = NotificationManager(
+            {
+                "enabled": True,
+                "rate_limit": {"enabled": False},
+            }
+        )
         assert manager._check_rate_limit("service_test") is True
 
     def test_should_block_when_min_interval_not_met(self, mocker):
@@ -163,10 +165,7 @@ class TestNotificationManagerContentFilter:
         result = manager._filter_sensitive_content("test")
 
         assert result == "test"
-        assert any(
-            "Error applying content filter pattern" in record.message
-            for record in caplog.records
-        )
+        assert any("Error applying content filter pattern" in record.message for record in caplog.records)
 
     def test_should_filter_nested_dict(self):
         """Test recursive dictionary filtering."""

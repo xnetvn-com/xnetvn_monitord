@@ -79,7 +79,7 @@ class ConfigLoader:
             Content with expanded environment variables.
         """
         # Pattern to match ${VAR_NAME} or $VAR_NAME
-        pattern = re.compile(r'\$\{([^}]+)\}|\$([A-Za-z_][A-Za-z0-9_]*)')
+        pattern = re.compile(r"\$\{([^}]+)\}|\$([A-Za-z_][A-Za-z0-9_]*)")
 
         def replacer(match):
             var_name = match.group(1) or match.group(2)
@@ -100,7 +100,7 @@ class ConfigLoader:
         # Handle empty YAML files (yaml.safe_load returns None)
         if self.config is None:
             self.config = {}
-        
+
         if not isinstance(self.config, dict):
             raise ValueError("Configuration must be a dictionary")
 

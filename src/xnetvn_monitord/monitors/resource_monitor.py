@@ -134,9 +134,7 @@ class ResourceMonitor:
                 if load_avg[0] > threshold:
                     result["threshold_exceeded"] = True
                     result["exceeded_type"] = "1min"
-                    logger.warning(
-                        f"CPU load (1min) exceeded threshold: {load_avg[0]:.2f} > {threshold}"
-                    )
+                    logger.warning(f"CPU load (1min) exceeded threshold: {load_avg[0]:.2f} > {threshold}")
 
             # Check 5-minute load
             if not result["threshold_exceeded"] and config.get("check_5min", False):
@@ -144,9 +142,7 @@ class ResourceMonitor:
                 if load_avg[1] > threshold:
                     result["threshold_exceeded"] = True
                     result["exceeded_type"] = "5min"
-                    logger.warning(
-                        f"CPU load (5min) exceeded threshold: {load_avg[1]:.2f} > {threshold}"
-                    )
+                    logger.warning(f"CPU load (5min) exceeded threshold: {load_avg[1]:.2f} > {threshold}")
 
             # Check 15-minute load
             if not result["threshold_exceeded"] and config.get("check_15min", False):
@@ -154,9 +150,7 @@ class ResourceMonitor:
                 if load_avg[2] > threshold:
                     result["threshold_exceeded"] = True
                     result["exceeded_type"] = "15min"
-                    logger.warning(
-                        f"CPU load (15min) exceeded threshold: {load_avg[2]:.2f} > {threshold}"
-                    )
+                    logger.warning(f"CPU load (15min) exceeded threshold: {load_avg[2]:.2f} > {threshold}")
 
         except Exception as e:
             logger.error(f"Error checking CPU load: {str(e)}")
@@ -322,8 +316,7 @@ class ResourceMonitor:
                             mp_result["threshold_exceeded"] = True
                             result["threshold_exceeded"] = True
                             logger.warning(
-                                f"Disk space on {path} below threshold: "
-                                f"{free_mb:.2f} MB < {free_mb_threshold} MB"
+                                f"Disk space on {path} below threshold: " f"{free_mb:.2f} MB < {free_mb_threshold} MB"
                             )
 
                 except Exception as e:
@@ -350,11 +343,11 @@ class ResourceMonitor:
             "recovery_command": None,
             "recovery_command_success": None,
         }
-        
+
         # Check for direct recovery command in cpu_load config
         cpu_config = self.config.get("cpu_load", {})
         recovery_command = cpu_config.get("recovery_command")
-        
+
         if recovery_command:
             action_details["recovery_command"] = recovery_command
             # Execute recovery command directly
@@ -380,13 +373,13 @@ class ResourceMonitor:
             except Exception as e:
                 action_details["recovery_command_success"] = False
                 logger.error("Error executing CPU recovery command: %s", str(e))
-        
+
         # Also restart configured services
         recovery_config = self.config.get("recovery_actions", {})
         services = recovery_config.get("high_cpu_services", [])
         if services:
             action_details["services"] = self._restart_services(services, recovery_config)
-        
+
         self._update_action_cooldown("high_cpu")
         action_details["success"] = self._evaluate_action_success(action_details)
 
@@ -466,9 +459,7 @@ class ResourceMonitor:
                 if action_result.get("success"):
                     logger.info(f"Successfully restarted {service_name}")
                 else:
-                    logger.error(
-                        f"Failed to restart {service_name}: {service_result['stderr']}"
-                    )
+                    logger.error(f"Failed to restart {service_name}: {service_result['stderr']}")
 
                 # Wait between restarts
                 if service_name != services[-1]:
@@ -568,13 +559,15 @@ class ResourceMonitor:
                 path = mp.get("path", "/")
                 if os.path.exists(path):
                     usage = psutil.disk_usage(path)
-                    stats["disk"]["mount_points"].append({
-                        "path": path,
-                        "total_gb": usage.total / (1024**3),
-                        "used_gb": usage.used / (1024**3),
-                        "free_gb": usage.free / (1024**3),
-                        "percent_used": usage.percent,
-                    })
+                    stats["disk"]["mount_points"].append(
+                        {
+                            "path": path,
+                            "total_gb": usage.total / (1024**3),
+                            "used_gb": usage.used / (1024**3),
+                            "free_gb": usage.free / (1024**3),
+                            "percent_used": usage.percent,
+                        }
+                    )
 
             # Network stats
             net_totals = psutil.net_io_counters()

@@ -26,15 +26,15 @@ import subprocess
 import time
 import urllib.error
 import urllib.request
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from xnetvn_monitord.notifiers import NotificationManager
 
-from xnetvn_monitord.utils.service_manager import ServiceManager
 from xnetvn_monitord.utils.network import force_ipv4
+from xnetvn_monitord.utils.service_manager import ServiceManager
 
 
 class ServiceMonitor:
@@ -94,9 +94,7 @@ class ServiceMonitor:
 
                 if not status["running"]:
                     status["event_timestamp"] = time.time()
-                    logger.warning(
-                        f"Service {service_name} is not running: {status['message']}"
-                    )
+                    logger.warning(f"Service {service_name} is not running: {status['message']}")
                     action_result = self._handle_service_failure(service_config, status)
                     if action_result:
                         status["action_result"] = action_result
@@ -104,9 +102,7 @@ class ServiceMonitor:
                     logger.debug(f"Service {service_name} is running normally")
 
             except Exception as e:
-                logger.error(
-                    f"Error checking service {service_name}: {str(e)}", exc_info=True
-                )
+                logger.error(f"Error checking service {service_name}: {str(e)}", exc_info=True)
                 results.append(
                     {
                         "name": service_name,
@@ -141,9 +137,7 @@ class ServiceMonitor:
             if check_method == "systemctl":
                 running = self._check_systemctl(service_config)
                 status["running"] = running
-                status["message"] = (
-                    "Active" if running else "Inactive or failed"
-                )
+                status["message"] = "Active" if running else "Inactive or failed"
 
             elif check_method in ["auto", "service", "openrc"]:
                 running = self._check_service_manager(service_config, check_method)
@@ -158,9 +152,7 @@ class ServiceMonitor:
             elif check_method == "process_regex":
                 running = self._check_process_regex(service_config)
                 status["running"] = running
-                status["message"] = (
-                    "Process pattern matched" if running else "No matching process"
-                )
+                status["message"] = "Process pattern matched" if running else "No matching process"
 
             elif check_method == "custom_command":
                 running = self._check_custom_command(service_config)
@@ -435,9 +427,7 @@ class ServiceMonitor:
             if compiled_patterns is None:
                 compiled_patterns = [re.compile(p) for p in patterns]
                 self._regex_cache[pattern_key] = compiled_patterns
-            result = subprocess.run(
-                ["ps", "aux"], capture_output=True, text=True, timeout=10
-            )
+            result = subprocess.run(["ps", "aux"], capture_output=True, text=True, timeout=10)
             if result.returncode != 0:
                 return False
 
@@ -630,9 +620,7 @@ class ServiceMonitor:
             return None
 
         if not self._check_action_cooldown(service_key, service_config):
-            logger.info(
-                f"Service {service_name} is in action cooldown period, skipping recovery"
-            )
+            logger.info(f"Service {service_name} is in action cooldown period, skipping recovery")
             return {
                 "action": "recovery_skipped",
                 "success": False,
@@ -642,9 +630,7 @@ class ServiceMonitor:
 
         action_ready, action_reason = self._check_action_readiness(service_config)
         if not action_ready:
-            logger.info(
-                f"Service {service_name} action blocked: {action_reason}"
-            )
+            logger.info(f"Service {service_name} action blocked: {action_reason}")
             return {
                 "action": "recovery_blocked",
                 "success": False,
@@ -654,9 +640,7 @@ class ServiceMonitor:
 
         # Check restart attempts BEFORE attempting restart
         if not self._check_restart_attempts(service_key):
-            logger.error(
-                f"Service {service_name} has exceeded maximum restart attempts"
-            )
+            logger.error(f"Service {service_name} has exceeded maximum restart attempts")
             return None
 
         # Check cooldown
@@ -762,9 +746,7 @@ class ServiceMonitor:
 
         return True, "Recovery action is ready"
 
-    def _check_systemd_state(
-        self, service_name: Optional[str], service_pattern: Optional[str]
-    ) -> Tuple[bool, bool]:
+    def _check_systemd_state(self, service_name: Optional[str], service_pattern: Optional[str]) -> Tuple[bool, bool]:
         """Check systemd service existence and restarting state.
 
         Args:
@@ -1032,11 +1014,7 @@ class ServiceMonitor:
             return None
 
         if isinstance(restart_command, list):
-            normalized_commands = [
-                str(command).strip()
-                for command in restart_command
-                if str(command).strip()
-            ]
+            normalized_commands = [str(command).strip() for command in restart_command if str(command).strip()]
             if not normalized_commands:
                 if service_name:
                     return self.service_manager.build_restart_command(service_name)

@@ -165,9 +165,7 @@ class TestUpdateCheckerResults:
 class TestUpdateCheckerApplyUpdate:
     """Tests for applying updates and refreshing example files."""
 
-    def test_should_refresh_example_files_without_overwriting_user_config(
-        self, tmp_path, monkeypatch
-    ) -> None:
+    def test_should_refresh_example_files_without_overwriting_user_config(self, tmp_path, monkeypatch) -> None:
         """Ensure example files are refreshed while user config stays intact."""
         install_dir = tmp_path / "install"
         install_dir.mkdir()

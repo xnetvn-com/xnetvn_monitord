@@ -78,9 +78,7 @@ class TelegramNotifier:
                 success_count += 1
 
         if success_count > 0:
-            logger.info(
-                f"Telegram notification sent successfully to {success_count}/{len(self.chat_ids)} chats"
-            )
+            logger.info(f"Telegram notification sent successfully to {success_count}/{len(self.chat_ids)} chats")
             return True
         else:
             logger.error("Failed to send Telegram notification to any chat")
@@ -120,9 +118,7 @@ class TelegramNotifier:
                 with urllib.request.urlopen(request, timeout=self.timeout) as response:
                     result = json.loads(response.read().decode("utf-8"))
                     if result.get("ok"):
-                        logger.debug(
-                            "Telegram message sent successfully to chat %s", chat_id
-                        )
+                        logger.debug("Telegram message sent successfully to chat %s", chat_id)
                         return True
                     logger.error(
                         "Telegram API error for chat %s: %s",
@@ -131,9 +127,7 @@ class TelegramNotifier:
                     )
                     return False
         except Exception as e:
-            logger.error(
-                f"Error sending Telegram message to {chat_id}: {str(e)}", exc_info=True
-            )
+            logger.error(f"Error sending Telegram message to {chat_id}: {str(e)}", exc_info=True)
             return False
 
     def send_service_alert(self, service_name: str, status: str, details: str) -> bool:
@@ -320,11 +314,7 @@ _xNetVN Monitor_
         Returns:
             Escaped text.
         """
-        return (
-            text.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-        )
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
     def test_connection(self) -> bool:
         """Test Telegram bot connection.

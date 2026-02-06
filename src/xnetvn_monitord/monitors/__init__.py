@@ -14,7 +14,7 @@
 
 """Monitors package initialization."""
 
-from .service_monitor import ServiceMonitor
 from .resource_monitor import ResourceMonitor
+from .service_monitor import ServiceMonitor
 
 __all__ = ["ServiceMonitor", "ResourceMonitor"]

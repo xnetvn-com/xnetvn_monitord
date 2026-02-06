@@ -29,14 +29,12 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from urllib import error, request
 
-from .service_manager import ServiceManager
 from .network import force_ipv4
+from .service_manager import ServiceManager
 
 logger = logging.getLogger(__name__)
 
-_VERSION_PATTERN = re.compile(
-    r"^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$"
-)
+_VERSION_PATTERN = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$")
 
 
 @dataclass(frozen=True)
@@ -301,11 +299,7 @@ class UpdateChecker:
             )
 
         update_available = comparison == -1
-        message = (
-            "New version available"
-            if update_available
-            else "Already on latest version"
-        )
+        message = "New version available" if update_available else "Already on latest version"
         self._save_state(now)
 
         return UpdateCheckResult(
@@ -341,11 +335,7 @@ class UpdateChecker:
                 with tarfile.open(tarball_path, "r:gz") as tar_handle:
                     tar_handle.extractall(path=temp_dir)
 
-                extracted_dirs = [
-                    path
-                    for path in Path(temp_dir).iterdir()
-                    if path.is_dir()
-                ]
+                extracted_dirs = [path for path in Path(temp_dir).iterdir() if path.is_dir()]
                 if not extracted_dirs:
                     logger.error("No extracted release directory found")
                     return False
@@ -356,12 +346,7 @@ class UpdateChecker:
                     logger.error("Release source directory not found: %s", source_dir)
                     return False
 
-                backup_dir = (
-                    self.install_dir
-                    / ".local"
-                    / "backups"
-                    / f"xnetvn_monitord_{int(time.time())}"
-                )
+                backup_dir = self.install_dir / ".local" / "backups" / f"xnetvn_monitord_{int(time.time())}"
                 backup_dir.parent.mkdir(parents=True, exist_ok=True)
                 if target_dir.exists():
                     shutil.copytree(target_dir, backup_dir)

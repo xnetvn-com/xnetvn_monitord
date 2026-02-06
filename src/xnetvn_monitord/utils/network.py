@@ -16,8 +16,8 @@
 
 from __future__ import annotations
 
-from contextlib import contextmanager
 import socket
+from contextlib import contextmanager
 from typing import Iterator
 
 
