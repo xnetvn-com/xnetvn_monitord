@@ -317,7 +317,15 @@ class UpdateChecker:
 
     @staticmethod
     def _safe_extract(tar_handle: tarfile.TarFile, target_dir: Path) -> None:
-        """Safely extract tar members by blocking path traversal attempts."""
+        """Safely extract tar members by blocking path traversal attempts.
+
+        Args:
+            tar_handle: Open tar archive handle.
+            target_dir: Destination directory for extracted contents.
+
+        Raises:
+            ValueError: If the tar archive contains unsafe paths or links.
+        """
         base_path = target_dir.resolve()
         for member in tar_handle.getmembers():
             if member.islnk() or member.issym():

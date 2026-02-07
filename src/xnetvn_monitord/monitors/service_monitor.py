@@ -481,6 +481,12 @@ class ServiceMonitor:
         - list[str]: treated as multiple full command strings (one per entry).
         - list[list[str]]: treated as multiple pre-tokenized commands (e.g.,
           output from ServiceManager wrapped in a list).
+
+        Args:
+            command: Command specification to normalize.
+
+        Returns:
+            List of command argument lists for subprocess execution.
         """
         if isinstance(command, str):
             stripped = command.strip()
@@ -1024,7 +1030,15 @@ class ServiceMonitor:
             return False
 
     def _build_service_restart_command(self, service_name: Optional[str]) -> Optional[List[List[str]]]:
-        """Build a restart command list for service manager-backed restarts."""
+        """Build a restart command list for service manager-backed restarts.
+
+        Args:
+            service_name: Name of the service to restart.
+
+        Returns:
+            A list containing a single tokenized restart command, or None if the
+            service name is missing or the manager does not support restarts.
+        """
         if not service_name:
             return None
         command = self.service_manager.build_restart_command(service_name)
