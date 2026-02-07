@@ -317,7 +317,7 @@ class UpdateChecker:
 
     @staticmethod
     def _safe_extract(tar_handle: tarfile.TarFile, target_dir: Path) -> None:
-        """Safely extract tar archive members into target directory."""
+        """Safely extract tar members by blocking path traversal attempts."""
         base_path = target_dir.resolve()
         for member in tar_handle.getmembers():
             member_path = (base_path / member.name).resolve()

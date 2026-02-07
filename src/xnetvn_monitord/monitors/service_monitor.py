@@ -474,7 +474,15 @@ class ServiceMonitor:
 
     @staticmethod
     def _iter_command_args(command: Any) -> List[List[str]]:
-        """Normalize a command into a list of argument lists."""
+        """Normalize command input into argument lists for subprocess calls.
+
+        Supported formats:
+        - str: treated as a shell-style command string and split with shlex.
+        - list[str]: if any entry contains whitespace, each entry is treated as
+          a full command string; otherwise the list is treated as a tokenized
+          argument list (e.g., output from ServiceManager).
+        - list[list[str]]: treated as multiple pre-tokenized commands.
+        """
         if isinstance(command, str):
             stripped = command.strip()
             return [shlex.split(stripped)] if stripped else []
