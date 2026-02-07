@@ -320,12 +320,14 @@ class UpdateChecker:
         """Safely extract tar members by blocking path traversal attempts."""
         base_path = target_dir.resolve()
         for member in tar_handle.getmembers():
+            if member.islnk() or member.issym():
+                raise ValueError(f"Unsafe tar member link: {member.name}")
             member_path = (base_path / member.name).resolve()
             try:
                 member_path.relative_to(base_path)
             except ValueError as exc:
                 raise ValueError(f"Unsafe tar member path: {member.name}") from exc
-        tar_handle.extractall(path=target_dir)  # nosec B202
+            tar_handle.extract(member, path=target_dir)
 
     def apply_update(self, tarball_url: str) -> bool:
         """Download and apply update from GitHub tarball.

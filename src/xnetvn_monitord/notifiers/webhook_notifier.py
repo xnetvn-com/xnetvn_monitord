@@ -131,7 +131,7 @@ class WebhookNotifier:
 
             ssl_context = None
             if not self.verify_ssl:
-                logger.warning("Webhook SSL verification is disabled for outbound requests")
+                logger.warning("Webhook SSL verification is disabled")
                 ssl_context = ssl.create_default_context()
                 ssl_context.check_hostname = False
                 ssl_context.verify_mode = ssl.CERT_NONE

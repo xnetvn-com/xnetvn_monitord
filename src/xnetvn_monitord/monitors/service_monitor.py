@@ -527,7 +527,7 @@ class ServiceMonitor:
                     return False
             return True
         except Exception as e:
-            logger.error(f"Error running custom check command: {str(e)}")
+            logger.error("Error running custom check command: %s", str(e))
             return False
 
     def _check_iptables(self, service_config: Dict) -> bool:
