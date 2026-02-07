@@ -353,19 +353,21 @@ class ResourceMonitor:
             action_details["recovery_command"] = recovery_command
             # Execute recovery command directly
             try:
+                parse_error = False
                 if isinstance(recovery_command, str):
                     command_args = shlex.split(recovery_command.strip())
                 elif isinstance(recovery_command, list):
                     command_args = [str(item) for item in recovery_command if str(item).strip()]
                 else:
                     command_args = []
+                    parse_error = True
                     action_details["recovery_command_success"] = False
                     logger.error(
                         "CPU recovery command has unsupported type: %s",
                         type(recovery_command).__name__,
                     )
                 if not command_args:
-                    if action_details["recovery_command_success"] is None:
+                    if not parse_error:
                         action_details["recovery_command_success"] = False
                         logger.error("CPU recovery command is empty after parsing")
                 else:
