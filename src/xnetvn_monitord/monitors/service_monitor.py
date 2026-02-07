@@ -478,10 +478,9 @@ class ServiceMonitor:
 
         Supported formats:
         - str: treated as a shell-style command string and split with shlex.
-        - list[str]: if any entry contains whitespace, each entry is treated as
-          a full command string; otherwise the list is treated as a tokenized
-          argument list (e.g., output from ServiceManager).
-        - list[list[str]]: treated as multiple pre-tokenized commands.
+        - list[str]: treated as multiple full command strings (one per entry).
+        - list[list[str]]: treated as multiple pre-tokenized commands (e.g.,
+          output from ServiceManager wrapped in a list).
         """
         if isinstance(command, str):
             stripped = command.strip()
@@ -489,12 +488,10 @@ class ServiceMonitor:
         if isinstance(command, list):
             if not command:
                 return []
-            if all(isinstance(item, str) for item in command):
-                if any(" " in item for item in command):
-                    return [shlex.split(item) for item in command if str(item).strip()]
-                return [[str(item) for item in command if str(item).strip()]]
             if all(isinstance(item, list) for item in command):
                 return [[str(part) for part in item if str(part).strip()] for item in command if item]
+            if all(isinstance(item, str) for item in command):
+                return [shlex.split(item) for item in command if str(item).strip()]
             logger.warning("Unsupported command list format: %s", command)
             return []
         logger.warning("Unsupported command type: %s", type(command).__name__)
@@ -1039,14 +1036,16 @@ class ServiceMonitor:
         service_name = service_config.get("service_name") or service_config.get("name")
         if not restart_command:
             if service_name:
-                return self.service_manager.build_restart_command(service_name)
+                command = self.service_manager.build_restart_command(service_name)
+                return [command] if command else None
             return None
 
         if isinstance(restart_command, list):
             normalized_commands = [str(command).strip() for command in restart_command if str(command).strip()]
             if not normalized_commands:
                 if service_name:
-                    return self.service_manager.build_restart_command(service_name)
+                    command = self.service_manager.build_restart_command(service_name)
+                    return [command] if command else None
                 return None
             return normalized_commands
 
@@ -1054,11 +1053,13 @@ class ServiceMonitor:
             command_value = restart_command.strip()
             if not command_value:
                 if service_name:
-                    return self.service_manager.build_restart_command(service_name)
+                    command = self.service_manager.build_restart_command(service_name)
+                    return [command] if command else None
                 return None
             if command_value.startswith("systemctl") and not self.service_manager.is_systemd:
                 if service_name:
-                    return self.service_manager.build_restart_command(service_name)
+                    command = self.service_manager.build_restart_command(service_name)
+                    return [command] if command else None
             return command_value
 
         logger.warning(
@@ -1067,7 +1068,8 @@ class ServiceMonitor:
             type(restart_command).__name__,
         )
         if service_name:
-            return self.service_manager.build_restart_command(service_name)
+            command = self.service_manager.build_restart_command(service_name)
+            return [command] if command else None
         return None
 
     def reset_restart_history(self) -> None:
