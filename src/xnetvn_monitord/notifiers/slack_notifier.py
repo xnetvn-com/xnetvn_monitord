@@ -123,6 +123,7 @@ class SlackNotifier:
 
             ssl_context = None
             if not self.verify_ssl:
+                logger.warning("Slack SSL verification is disabled for webhook requests")
                 ssl_context = ssl.create_default_context()
                 ssl_context.check_hostname = False
                 ssl_context.verify_mode = ssl.CERT_NONE

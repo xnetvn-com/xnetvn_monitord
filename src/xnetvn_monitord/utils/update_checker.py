@@ -321,8 +321,10 @@ class UpdateChecker:
         base_path = target_dir.resolve()
         for member in tar_handle.getmembers():
             member_path = (base_path / member.name).resolve()
-            if not str(member_path).startswith(str(base_path)):
-                raise ValueError(f"Unsafe tar member path: {member.name}")
+            try:
+                member_path.relative_to(base_path)
+            except ValueError as exc:
+                raise ValueError(f"Unsafe tar member path: {member.name}") from exc
         tar_handle.extractall(path=target_dir)  # nosec B202
 
     def apply_update(self, tarball_url: str) -> bool:
