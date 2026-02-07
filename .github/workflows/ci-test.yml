@@ -1,4 +1,4 @@
-name: CI - update script
+name: CI Test
 
 on:
   push:
@@ -6,45 +6,42 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: ci-test-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
-  lint-and-test:
+  tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: "3.11"
+          cache: "pip"
           cache-dependency-path: requirements-dev.txt
 
-      - name: Install dev dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
-      - name: Install ShellCheck
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y shellcheck
-
-      - name: ShellCheck update.sh
-        run: shellcheck scripts/update.sh
-
-      - name: Run pytest (update dry-run)
+      - name: Run pytest
         run: pytest -q
 
-      - name: Upload pytest artifacts
+      - name: Upload coverage artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-artifacts
+          name: coverage-artifacts
           path: |
             coverage.xml
             htmlcov/

@@ -1,0 +1,22 @@
+name: Compliance Check
+
+on:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compliance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify required documents
+        run: |
+          python -c "from pathlib import Path; required = ['LICENSE','SECURITY.md','CODE_OF_CONDUCT.md','CHANGELOG.md']; missing = [p for p in required if not Path(p).exists()]; assert not missing, f'Missing: {missing}'"

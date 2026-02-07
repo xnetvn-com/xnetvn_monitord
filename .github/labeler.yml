@@ -1,0 +1,23 @@
+documentation:
+  - "docs/**"
+  - "README.md"
+  - "CHANGELOG.md"
+
+ci:
+  - ".github/workflows/**"
+
+tests:
+  - "tests/**"
+  - "debug/**"
+
+scripts:
+  - "scripts/**"
+
+config:
+  - "config/**"
+  - "systemd/**"
+
+python:
+  - "src/**"
+  - "pyproject.toml"
+  - "requirements*.txt"
