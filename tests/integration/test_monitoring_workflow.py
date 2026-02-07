@@ -60,7 +60,6 @@ class TestMonitoringWorkflow:
     def test_should_detect_and_notify_service_failure(self, mocker, config_file):
         """Test end-to-end service failure detection and notification."""
         from xnetvn_monitord.monitors.service_monitor import ServiceMonitor
-        from xnetvn_monitord.notifiers import NotificationManager
         from xnetvn_monitord.utils.config_loader import ConfigLoader
 
         # Mock service as failed
@@ -70,7 +69,6 @@ class TestMonitoringWorkflow:
         config = loader.load()
 
         service_monitor = ServiceMonitor(config["service_monitor"])
-        notification_manager = NotificationManager(config["notifications"])
 
         # Check services
         results = service_monitor.check_all_services()

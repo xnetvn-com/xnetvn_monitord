@@ -20,6 +20,7 @@ restart them when they are not running properly.
 
 import logging
 import re
+import shlex
 import socket
 import ssl
 import subprocess
@@ -28,13 +29,13 @@ import urllib.error
 import urllib.request
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
-logger = logging.getLogger(__name__)
+from xnetvn_monitord.utils.network import force_ipv4, is_http_url
+from xnetvn_monitord.utils.service_manager import ServiceManager
 
 if TYPE_CHECKING:
     from xnetvn_monitord.notifiers import NotificationManager
 
-from xnetvn_monitord.utils.network import force_ipv4
-from xnetvn_monitord.utils.service_manager import ServiceManager
+logger = logging.getLogger(__name__)
 
 
 class ServiceMonitor:
@@ -471,6 +472,37 @@ class ServiceMonitor:
 
         return any_running
 
+    @staticmethod
+    def _iter_command_args(command: Any) -> List[List[str]]:
+        """Normalize command input into argument lists for subprocess calls.
+
+        Supported formats:
+        - str: treated as a shell-style command string and split with shlex.
+        - list[str]: treated as multiple full command strings (one per entry).
+        - list[list[str]]: treated as multiple pre-tokenized commands (e.g.,
+          output from ServiceManager wrapped in a list).
+
+        Args:
+            command: Command specification to normalize.
+
+        Returns:
+            List of command argument lists for subprocess execution.
+        """
+        if isinstance(command, str):
+            stripped = command.strip()
+            return [shlex.split(stripped)] if stripped else []
+        if isinstance(command, list):
+            if not command:
+                return []
+            if all(isinstance(item, list) for item in command):
+                return [[str(part) for part in item if str(part).strip()] for item in command if item]
+            if all(isinstance(item, str) for item in command):
+                return [shlex.split(item) for item in command if str(item).strip()]
+            logger.warning("Unsupported command list format: %s", command)
+            return []
+        logger.warning("Unsupported command type: %s", type(command).__name__)
+        return []
+
     def _check_custom_command(self, service_config: Dict) -> bool:
         """Check service using custom command.
 
@@ -485,18 +517,23 @@ class ServiceMonitor:
             return False
 
         timeout_seconds = service_config.get("check_timeout", 30)
+        commands = self._iter_command_args(check_command)
+        if not commands:
+            return False
 
         try:
-            result = subprocess.run(
-                check_command,
-                shell=True,
-                capture_output=True,
-                text=True,
-                timeout=timeout_seconds,
-            )
-            return result.returncode == 0
+            for command in commands:
+                result = subprocess.run(
+                    command,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout_seconds,
+                )
+                if result.returncode != 0:
+                    return False
+            return True
         except Exception as e:
-            logger.error(f"Error running custom check command: {str(e)}")
+            logger.error("Error running custom check command: %s", str(e))
             return False
 
     def _check_iptables(self, service_config: Dict) -> bool:
@@ -540,6 +577,8 @@ class ServiceMonitor:
         url = service_config.get("url")
         if not url:
             return {"running": False, "message": "Missing URL for HTTP check"}
+        if not is_http_url(url):
+            return {"running": False, "message": "Invalid URL scheme for HTTP check"}
 
         timeout_seconds = service_config.get("timeout_seconds", 10)
         expected_codes = service_config.get("expected_status_codes") or [200, 204, 301, 302]
@@ -558,7 +597,7 @@ class ServiceMonitor:
         start_time = time.monotonic()
         try:
             with force_ipv4(self.only_ipv4):
-                with urllib.request.urlopen(
+                with urllib.request.urlopen(  # nosec B310
                     request,
                     timeout=timeout_seconds,
                     context=context,
@@ -939,42 +978,34 @@ class ServiceMonitor:
             pre_hook = service_config.get("pre_restart_hook")
             if pre_hook:
                 logger.info(f"Running pre-restart hook for {service_name}: {pre_hook}")
-                subprocess.run(pre_hook, shell=True, timeout=30)
+                for command in self._iter_command_args(pre_hook):
+                    subprocess.run(command, timeout=30)
 
             # Restart the service
-            if isinstance(resolved_command, list):
-                for command in resolved_command:
-                    logger.info(
-                        "Executing restart command for %s: %s",
-                        service_name,
-                        command,
-                    )
-                    result = subprocess.run(
-                        command,
-                        shell=True,
-                        capture_output=True,
-                        text=True,
-                        timeout=60,
-                    )
-                    if result.returncode != 0:
-                        logger.warning(
-                            "Restart command returned non-zero for %s: %s",
-                            service_name,
-                            (result.stderr or result.stdout or "").strip(),
-                        )
-            else:
+            commands = self._iter_command_args(resolved_command)
+            if not commands:
+                logger.error(f"No restart command defined for service: {service_name}")
+                return False
+
+            for command in commands:
+                command_label = " ".join(command)
                 logger.info(
                     "Executing restart command for %s: %s",
                     service_name,
-                    resolved_command,
+                    command_label,
                 )
                 result = subprocess.run(
-                    resolved_command,
-                    shell=True,
+                    command,
                     capture_output=True,
                     text=True,
                     timeout=60,
                 )
+                if result.returncode != 0:
+                    logger.warning(
+                        "Restart command returned non-zero for %s: %s",
+                        service_name,
+                        (result.stderr or result.stdout or "").strip(),
+                    )
 
             # Wait between restart attempts
             wait_time = self.config.get("restart_wait_time", 10)
@@ -984,7 +1015,8 @@ class ServiceMonitor:
             post_hook = service_config.get("post_restart_hook")
             if post_hook:
                 logger.info(f"Running post-restart hook for {service_name}: {post_hook}")
-                subprocess.run(post_hook, shell=True, timeout=30)
+                for command in self._iter_command_args(post_hook):
+                    subprocess.run(command, timeout=30)
 
             # Verify service is running
             status = self._check_service(service_config)
@@ -996,6 +1028,21 @@ class ServiceMonitor:
         except Exception as e:
             logger.error(f"Error restarting service {service_name}: {str(e)}", exc_info=True)
             return False
+
+    def _build_service_restart_command(self, service_name: Optional[str]) -> Optional[List[List[str]]]:
+        """Build a restart command list for service manager-backed restarts.
+
+        Args:
+            service_name: Name of the service to restart.
+
+        Returns:
+            A list containing a single tokenized restart command, or None if the
+            service name is missing or the manager does not support restarts.
+        """
+        if not service_name:
+            return None
+        command = self.service_manager.build_restart_command(service_name)
+        return [command] if command else None
 
     def _resolve_restart_command(self, restart_command: Optional[Any], service_config: Dict) -> Optional[Any]:
         """Resolve restart command based on available service manager.
@@ -1009,27 +1056,20 @@ class ServiceMonitor:
         """
         service_name = service_config.get("service_name") or service_config.get("name")
         if not restart_command:
-            if service_name:
-                return self.service_manager.build_restart_command(service_name)
-            return None
+            return self._build_service_restart_command(service_name)
 
         if isinstance(restart_command, list):
             normalized_commands = [str(command).strip() for command in restart_command if str(command).strip()]
             if not normalized_commands:
-                if service_name:
-                    return self.service_manager.build_restart_command(service_name)
-                return None
+                return self._build_service_restart_command(service_name)
             return normalized_commands
 
         if isinstance(restart_command, str):
             command_value = restart_command.strip()
             if not command_value:
-                if service_name:
-                    return self.service_manager.build_restart_command(service_name)
-                return None
+                return self._build_service_restart_command(service_name)
             if command_value.startswith("systemctl") and not self.service_manager.is_systemd:
-                if service_name:
-                    return self.service_manager.build_restart_command(service_name)
+                return self._build_service_restart_command(service_name)
             return command_value
 
         logger.warning(
@@ -1037,9 +1077,7 @@ class ServiceMonitor:
             service_name,
             type(restart_command).__name__,
         )
-        if service_name:
-            return self.service_manager.build_restart_command(service_name)
-        return None
+        return self._build_service_restart_command(service_name)
 
     def reset_restart_history(self) -> None:
         """Reset all restart history and cooldown trackers."""

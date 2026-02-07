@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from urllib import error, request
 
-from .network import force_ipv4
+from .network import force_ipv4, is_http_url
 from .service_manager import ServiceManager
 
 logger = logging.getLogger(__name__)
@@ -227,6 +227,9 @@ class UpdateChecker:
     def _fetch_latest_release(self) -> Optional[ReleaseInfo]:
         """Fetch latest GitHub release metadata."""
         url = f"{self.github_api_base_url}/repos/{self.github_repo}/releases/latest"
+        if not is_http_url(url):
+            logger.error("Invalid GitHub API URL: %s", url)
+            return None
         headers = {
             "Accept": "application/vnd.github+json",
             "User-Agent": "xnetvn_monitord-update-checker",
@@ -238,7 +241,7 @@ class UpdateChecker:
         req = request.Request(url, headers=headers)
         try:
             with force_ipv4(self.only_ipv4):
-                with request.urlopen(req, timeout=15) as response:
+                with request.urlopen(req, timeout=15) as response:  # nosec B310
                     data = json.loads(response.read().decode("utf-8"))
         except error.HTTPError as exc:
             logger.error("GitHub release check failed: %s", exc)
@@ -312,6 +315,28 @@ class UpdateChecker:
             message=message,
         )
 
+    @staticmethod
+    def _safe_extract(tar_handle: tarfile.TarFile, target_dir: Path) -> None:
+        """Safely extract tar members by blocking path traversal attempts.
+
+        Args:
+            tar_handle: Open tar archive handle.
+            target_dir: Destination directory for extracted contents.
+
+        Raises:
+            ValueError: If the tar archive contains unsafe paths or links.
+        """
+        base_path = target_dir.resolve()
+        for member in tar_handle.getmembers():
+            if member.islnk() or member.issym():
+                raise ValueError(f"Unsafe tar member link: {member.name}")
+            member_path = (base_path / member.name).resolve()
+            try:
+                member_path.relative_to(base_path)
+            except ValueError as exc:
+                raise ValueError(f"Unsafe tar member path: {member.name}") from exc
+            tar_handle.extract(member, path=target_dir)
+
     def apply_update(self, tarball_url: str) -> bool:
         """Download and apply update from GitHub tarball.
 
@@ -321,6 +346,10 @@ class UpdateChecker:
         Returns:
             True if update applied successfully.
         """
+        if not is_http_url(tarball_url):
+            logger.error("Invalid tarball URL: %s", tarball_url)
+            return False
+
         target_dir = self.install_dir / "xnetvn_monitord"
         if not target_dir.exists():
             logger.error("Target install directory not found: %s", target_dir)
@@ -330,10 +359,10 @@ class UpdateChecker:
             with tempfile.TemporaryDirectory() as temp_dir:
                 tarball_path = Path(temp_dir) / "release.tar.gz"
                 with force_ipv4(self.only_ipv4):
-                    request.urlretrieve(tarball_url, tarball_path)
+                    request.urlretrieve(tarball_url, tarball_path)  # nosec B310
 
                 with tarfile.open(tarball_path, "r:gz") as tar_handle:
-                    tar_handle.extractall(path=temp_dir)
+                    self._safe_extract(tar_handle, Path(temp_dir))
 
                 extracted_dirs = [path for path in Path(temp_dir).iterdir() if path.is_dir()]
                 if not extracted_dirs:

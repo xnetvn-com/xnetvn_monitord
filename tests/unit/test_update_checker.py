@@ -21,8 +21,6 @@ import shutil
 import tarfile
 from pathlib import Path
 
-import pytest
-
 from xnetvn_monitord.utils.update_checker import (
     ReleaseInfo,
     UpdateChecker,
