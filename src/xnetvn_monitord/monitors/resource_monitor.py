@@ -355,11 +355,19 @@ class ResourceMonitor:
             try:
                 if isinstance(recovery_command, str):
                     command_args = shlex.split(recovery_command.strip())
-                else:
+                elif isinstance(recovery_command, list):
                     command_args = [str(item) for item in recovery_command if str(item).strip()]
-                if not command_args:
+                else:
+                    command_args = []
                     action_details["recovery_command_success"] = False
-                    logger.error("CPU recovery command is empty after parsing")
+                    logger.error(
+                        "CPU recovery command has unsupported type: %s",
+                        type(recovery_command).__name__,
+                    )
+                if not command_args:
+                    if action_details["recovery_command_success"] is None:
+                        action_details["recovery_command_success"] = False
+                        logger.error("CPU recovery command is empty after parsing")
                 else:
                     result = subprocess.run(
                         command_args,

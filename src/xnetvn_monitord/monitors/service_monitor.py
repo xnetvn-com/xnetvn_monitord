@@ -495,6 +495,9 @@ class ServiceMonitor:
                 return [[str(item) for item in command if str(item).strip()]]
             if all(isinstance(item, list) for item in command):
                 return [[str(part) for part in item if str(part).strip()] for item in command if item]
+            logger.warning("Unsupported command list format: %s", command)
+            return []
+        logger.warning("Unsupported command type: %s", type(command).__name__)
         return []
 
     def _check_custom_command(self, service_config: Dict) -> bool:
