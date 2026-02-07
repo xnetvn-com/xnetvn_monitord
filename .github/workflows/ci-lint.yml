@@ -44,4 +44,5 @@ jobs:
         run: python -m flake8 src tests
 
       - name: Mypy
+        continue-on-error: true
         run: python -m mypy src

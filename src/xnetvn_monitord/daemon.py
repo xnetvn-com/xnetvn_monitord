@@ -91,9 +91,8 @@ class MonitorDaemon:
         notification_config.setdefault("only_ipv4", only_ipv4)
         self.notification_manager = NotificationManager(notification_config)
         enabled_channels = self.notification_manager.get_enabled_channels()
-        logger.info(
-            f"Notification manager initialized (channels: {', '.join(enabled_channels) if enabled_channels else 'none'})"
-        )
+        channels_label = ", ".join(enabled_channels) if enabled_channels else "none"
+        logger.info("Notification manager initialized (channels: %s)", channels_label)
 
         if self.service_monitor:
             self.service_monitor.notification_manager = self.notification_manager

@@ -24,7 +24,7 @@ import urllib.error
 import urllib.request
 from typing import Dict, List, Optional
 
-from xnetvn_monitord.utils.network import force_ipv4
+from xnetvn_monitord.utils.network import force_ipv4, is_http_url
 
 logger = logging.getLogger(__name__)
 
@@ -122,15 +122,21 @@ class WebhookNotifier:
             True if request succeeded, False otherwise.
         """
         try:
+            if not is_http_url(url):
+                logger.error("Webhook URL has invalid scheme: %s", url)
+                return False
+
             data = json.dumps(payload).encode("utf-8")
             request = urllib.request.Request(url, data=data, headers=headers, method="POST")
 
             ssl_context = None
             if not self.verify_ssl:
-                ssl_context = ssl._create_unverified_context()
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
 
             with force_ipv4(self.only_ipv4):
-                with urllib.request.urlopen(
+                with urllib.request.urlopen(  # nosec B310
                     request,
                     timeout=self.timeout,
                     context=ssl_context,

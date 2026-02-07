@@ -20,9 +20,10 @@ recovery actions when thresholds are exceeded.
 
 import logging
 import os
+import shlex
 import subprocess
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import psutil
 
@@ -352,21 +353,28 @@ class ResourceMonitor:
             action_details["recovery_command"] = recovery_command
             # Execute recovery command directly
             try:
-                result = subprocess.run(
-                    recovery_command,
-                    shell=True,
-                    capture_output=True,
-                    text=True,
-                    timeout=60,
-                )
-                action_details["recovery_command_success"] = result.returncode == 0
-                if result.returncode == 0:
-                    logger.info(
-                        "Successfully executed CPU recovery command: %s",
-                        recovery_command,
-                    )
+                if isinstance(recovery_command, str):
+                    command_args = shlex.split(recovery_command.strip())
                 else:
-                    logger.error("CPU recovery command failed: %s", result.stderr)
+                    command_args = [str(item) for item in recovery_command if str(item).strip()]
+                if not command_args:
+                    action_details["recovery_command_success"] = False
+                    logger.error("CPU recovery command is empty after parsing")
+                else:
+                    result = subprocess.run(
+                        command_args,
+                        capture_output=True,
+                        text=True,
+                        timeout=60,
+                    )
+                    action_details["recovery_command_success"] = result.returncode == 0
+                    if result.returncode == 0:
+                        logger.info(
+                            "Successfully executed CPU recovery command: %s",
+                            recovery_command,
+                        )
+                    else:
+                        logger.error("CPU recovery command failed: %s", result.stderr)
             except subprocess.TimeoutExpired:
                 action_details["recovery_command_success"] = False
                 logger.error("Timeout executing CPU recovery command: %s", recovery_command)

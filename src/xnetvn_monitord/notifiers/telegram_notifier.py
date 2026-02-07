@@ -23,9 +23,9 @@ import socket
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
-from xnetvn_monitord.utils.network import force_ipv4
+from xnetvn_monitord.utils.network import force_ipv4, is_http_url
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +101,9 @@ class TelegramNotifier:
         """
         try:
             url = f"{self.api_base_url}/sendMessage"
+            if not is_http_url(url):
+                logger.error("Telegram API URL has invalid scheme: %s", url)
+                return False
             data = {
                 "chat_id": chat_id,
                 "text": message,
@@ -115,7 +118,7 @@ class TelegramNotifier:
             request = urllib.request.Request(url, data=encoded_data, method="POST")
 
             with force_ipv4(self.only_ipv4):
-                with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                with urllib.request.urlopen(request, timeout=self.timeout) as response:  # nosec B310
                     result = json.loads(response.read().decode("utf-8"))
                     if result.get("ok"):
                         logger.debug("Telegram message sent successfully to chat %s", chat_id)
@@ -332,10 +335,13 @@ _xNetVN Monitor_
 
         try:
             url = f"{self.api_base_url}/getMe"
+            if not is_http_url(url):
+                logger.error("Telegram API URL has invalid scheme: %s", url)
+                return False
             request = urllib.request.Request(url, method="GET")
 
             with force_ipv4(self.only_ipv4):
-                with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                with urllib.request.urlopen(request, timeout=self.timeout) as response:  # nosec B310
                     result = json.loads(response.read().decode("utf-8"))
                     if result.get("ok"):
                         bot_info = result.get("result", {})
