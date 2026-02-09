@@ -1,10 +1,8 @@
 name: CI Test
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_call:
+  workflow_dispatch:
 
 concurrency:
   group: ci-test-${{ github.ref }}
@@ -21,6 +19,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -35,6 +35,8 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Run pytest
+        env:
+          PYTHONPATH: src
         run: pytest -q
 
       - name: Upload coverage artifacts
