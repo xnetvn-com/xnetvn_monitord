@@ -93,6 +93,11 @@ credentials.json
 tmp/
 temp/
 *.tmp
+# Security scan outputs and debug helpers
+bandit-results.json
+bandit-results.sarif
+debug_convert_bandit.py
+.tmp_check_yaml.py
 
 # OS specific
 Thumbs.db
