@@ -106,3 +106,9 @@ Thumbs.db
 # Project specific
 config/main.yaml
 !config/main.example.yaml
+
+
+pytest-of-*
+.mypy_*
+tmp*
+
