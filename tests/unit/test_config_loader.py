@@ -19,7 +19,6 @@ loading and validation functionality.
 """
 
 import os
-from pathlib import Path
 
 import pytest
 import yaml
@@ -373,7 +372,7 @@ class TestConfigLoaderReload:
     def test_should_preserve_state_after_failed_reload(self, config_file):
         """Test that state is preserved if reload fails."""
         loader = ConfigLoader(str(config_file))
-        original_config = loader.load()
+        loader.load()
 
         # Save original content
         with open(config_file, "r") as f:

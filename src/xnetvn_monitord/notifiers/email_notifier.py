@@ -22,7 +22,7 @@ import smtplib
 import socket
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Dict, List, Optional
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 
