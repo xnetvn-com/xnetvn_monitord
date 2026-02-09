@@ -1,23 +1,33 @@
 documentation:
-  - "docs/**"
-  - "README.md"
-  - "CHANGELOG.md"
+- changed-files:
+  - any-glob-to-any-file:
+    - 'docs/**'
+    - 'README.md'
+    - 'CHANGELOG.md'
 
 ci:
-  - ".github/workflows/**"
+- changed-files:
+  - any-glob-to-any-file: '.github/workflows/**'
 
 tests:
-  - "tests/**"
-  - "debug/**"
+- changed-files:
+  - any-glob-to-any-file:
+    - 'tests/**'
+    - 'debug/**'
 
 scripts:
-  - "scripts/**"
+- changed-files:
+  - any-glob-to-any-file: 'scripts/**'
 
 config:
-  - "config/**"
-  - "systemd/**"
+- changed-files:
+  - any-glob-to-any-file:
+    - 'config/**'
+    - 'systemd/**'
 
 python:
-  - "src/**"
-  - "pyproject.toml"
-  - "requirements*.txt"
+- changed-files:
+  - any-glob-to-any-file:
+    - 'src/**'
+    - 'pyproject.toml'
+    - 'requirements*.txt'
