@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  security-events: write  # For uploading SARIF results
 
 jobs:
   security:
@@ -36,8 +37,17 @@ jobs:
           pip install -r requirements-dev.txt
           pip install pip-audit
 
-      - name: Bandit
-        run: python -m bandit -r src --severity-level medium --confidence-level medium
+      - name: Bandit (with SARIF output)
+        run: |
+          python -m bandit -r src --severity-level medium --confidence-level medium -f sarif -o bandit-results.sarif || true
+          python -m bandit -r src --severity-level medium --confidence-level medium
+
+      - name: Upload Bandit SARIF results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: bandit-results.sarif
+          category: bandit
 
       - name: Pip Audit
         run: pip-audit -r requirements.txt -r requirements-dev.txt
