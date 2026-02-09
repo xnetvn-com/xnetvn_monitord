@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Validate changelog
         run: python -c "from pathlib import Path; data = Path('CHANGELOG.md').read_text(encoding='utf-8'); assert '[Unreleased]' in data"
