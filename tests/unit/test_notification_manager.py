@@ -14,8 +14,6 @@
 
 """Unit tests for NotificationManager."""
 
-import pytest
-
 from xnetvn_monitord.notifiers import NotificationManager
 
 

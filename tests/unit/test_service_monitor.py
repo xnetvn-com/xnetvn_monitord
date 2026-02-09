@@ -23,8 +23,6 @@ import time
 import urllib.error
 from unittest.mock import MagicMock, call
 
-import pytest
-
 from xnetvn_monitord.monitors.service_monitor import ServiceMonitor
 
 
@@ -338,7 +336,7 @@ class TestServiceMonitorProcessRegexCheck:
 
         for pattern in patterns:
             service_config = {
-                "name": f"php-fpm",
+                "name": "php-fpm",
                 "check_method": "process_regex",
                 "process_pattern": pattern,
             }
@@ -761,7 +759,7 @@ class TestServiceMonitorCheckAllServices:
 
     def test_should_skip_disabled_services(self, mocker):
         """Test that disabled services are skipped."""
-        mock_systemctl = mocker.patch.object(ServiceMonitor, "_check_systemctl")
+        mocker.patch.object(ServiceMonitor, "_check_systemctl")
 
         config = {
             "enabled": True,

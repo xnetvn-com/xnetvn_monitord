@@ -21,8 +21,6 @@ monitoring functionality.
 import subprocess
 import time
 
-import pytest
-
 from xnetvn_monitord.monitors.resource_monitor import ResourceMonitor
 
 
@@ -674,7 +672,7 @@ class TestResourceMonitorIntegration:
         """Test get_current_stats returns structured data."""
         mocker.patch("os.getloadavg", return_value=(1.0, 2.0, 3.0))
 
-        mock_cpu = mocker.patch("psutil.cpu_percent", return_value=10.0)
+        mocker.patch("psutil.cpu_percent", return_value=10.0)
 
         mock_mem = mocker.MagicMock()
         mock_mem.total = 8 * 1024 * 1024 * 1024

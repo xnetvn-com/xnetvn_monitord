@@ -1,10 +1,14 @@
-name: Code Quality
+name: CI Lint
 
 on:
   push:
-    branches: [ main, development ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, development ]
+    branches: [ main ]
+
+concurrency:
+  group: ci-lint-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -21,8 +25,8 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: "3.11"
+          cache: "pip"
           cache-dependency-path: requirements-dev.txt
 
       - name: Install dependencies

@@ -18,7 +18,8 @@ from __future__ import annotations
 
 import socket
 from contextlib import contextmanager
-from typing import Iterator
+from typing import Iterator, Tuple
+from urllib.parse import urlparse
 
 
 @contextmanager
@@ -52,3 +53,11 @@ def force_ipv4(enabled: bool) -> Iterator[None]:
         yield
     finally:
         socket.getaddrinfo = original_getaddrinfo
+
+
+def is_http_url(url: str, allowed_schemes: Tuple[str, ...] = ("http", "https")) -> bool:
+    """Return True when URL uses an allowed HTTP scheme and has a host."""
+    if not url:
+        return False
+    parsed = urlparse(url)
+    return parsed.scheme in allowed_schemes and bool(parsed.netloc)
