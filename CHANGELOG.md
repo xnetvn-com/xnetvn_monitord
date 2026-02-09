@@ -7,6 +7,24 @@ This format follows Keep a Changelog and uses Semantic Versioning.
 ## [Unreleased]
 
 
+## [1.2.0] - 2026-02-09
+
+### Added
+
+- Add CI workflows for testing, code quality, and security scanning (c772dbe).
+
+### Changed
+
+- Modularize GitHub Actions pipelines and streamline testing and matrix (09da261, 10b22f8, 3d35772, 4cf9099).
+
+### Fixed
+
+- CI: remove python3 distutils and coverage fix (44e1fde).
+
+### Security
+
+- Add Bandit SARIF generation and security scanning to CI.
+
 ## [1.1.0] - 2026-02-06
 
 ### Added
