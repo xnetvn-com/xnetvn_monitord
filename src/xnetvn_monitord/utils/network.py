@@ -36,17 +36,24 @@ def force_ipv4(enabled: bool) -> Iterator[None]:
         yield
         return
 
+    from typing import Any
+
     original_getaddrinfo = socket.getaddrinfo
 
-    def _getaddrinfo_ipv4(
-        host: str,
-        port: int,
-        family: int = 0,
-        type: int = 0,
-        proto: int = 0,
-        flags: int = 0,
-    ):
-        return original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+    def _getaddrinfo_ipv4(*args: Any, **kwargs: Any) -> Any:
+        # Ensure IPv4 family is used while preserving the original signature
+        # We pass through args and kwargs but override the family to AF_INET.
+        # This avoids strict typing mismatches with socket.getaddrinfo stubs.
+        if len(args) >= 3:
+            # (host, port, family, ...)
+            args_list = list(args)
+            args_list[2] = socket.AF_INET
+            return original_getaddrinfo(*args_list, **kwargs)
+        else:
+            # Fallback: call with explicit family
+            host = args[0] if len(args) > 0 else kwargs.get("host")
+            port = args[1] if len(args) > 1 else kwargs.get("port")
+            return original_getaddrinfo(host, port, socket.AF_INET, *args[2:], **kwargs)
 
     socket.getaddrinfo = _getaddrinfo_ipv4
     try:

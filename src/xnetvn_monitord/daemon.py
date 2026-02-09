@@ -25,7 +25,7 @@ import socket
 import sys
 import time
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from .monitors import ResourceMonitor, ServiceMonitor
 from .notifiers import NotificationManager
@@ -47,7 +47,7 @@ class MonitorDaemon:
         """
         self.config_path = config_path
         self.config_loader = ConfigLoader(config_path)
-        self.config = {}
+        self.config: Dict[str, Any] = {}
         self.running = False
         self.hostname = socket.gethostname()
         self.service_monitor: Optional[ServiceMonitor] = None

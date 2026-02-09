@@ -110,6 +110,7 @@ class EmailNotifier:
         timeout = self.smtp_config.get("timeout", 30)
 
         # Create SMTP connection
+        smtp: smtplib.SMTP
         if use_ssl:
             smtp = smtplib.SMTP_SSL(host, port, timeout=timeout)
         else:
@@ -382,6 +383,7 @@ xNetVN Monitor Daemon
             use_ssl = self.smtp_config.get("use_ssl", False)
             timeout = self.smtp_config.get("timeout", 30)
 
+            smtp: smtplib.SMTP
             if use_ssl:
                 smtp = smtplib.SMTP_SSL(host, port, timeout=timeout)
             else:

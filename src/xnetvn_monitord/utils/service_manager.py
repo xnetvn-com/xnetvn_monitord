@@ -25,7 +25,16 @@ import os
 import shutil
 import subprocess
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TypedDict
+
+
+class RestartResult(TypedDict):
+    command: Optional[str]
+    stdout: str
+    stderr: str
+    returncode: Optional[int]
+    success: bool
+
 
 logger = logging.getLogger(__name__)
 
@@ -217,7 +226,7 @@ class ServiceManager:
         service_name: str,
         timeout: int = 60,
         manager_type: Optional[str] = None,
-    ) -> Dict[str, Optional[str]]:
+    ) -> RestartResult:
         """Restart a service using the detected manager.
 
         Args:

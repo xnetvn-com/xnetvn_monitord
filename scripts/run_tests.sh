@@ -59,7 +59,7 @@ echo ""
 
 # Run different test suites
 run_tests() {
-    local test_type=$1
+    local _test_type=$1
     local marker=$2
     local description=$3
 

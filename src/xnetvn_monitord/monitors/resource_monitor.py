@@ -23,7 +23,7 @@ import os
 import shlex
 import subprocess
 import time
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import psutil
 
@@ -56,7 +56,7 @@ class ResourceMonitor:
             logger.debug("Resource monitoring is disabled")
             return {"enabled": False}
 
-        results = {
+        results: Dict[str, Any] = {
             "timestamp": time.time(),
             "cpu_load": None,
             "memory": None,
@@ -114,7 +114,7 @@ class ResourceMonitor:
         Returns:
             Dictionary containing CPU load status.
         """
-        result = {
+        result: Dict[str, Any] = {
             "load_1min": None,
             "load_5min": None,
             "load_15min": None,
@@ -168,7 +168,7 @@ class ResourceMonitor:
         Returns:
             Dictionary containing memory status.
         """
-        result = {
+        result: Dict[str, Any] = {
             "total_mb": None,
             "available_mb": None,
             "available_percent": None,
@@ -236,7 +236,7 @@ class ResourceMonitor:
         Returns:
             Dictionary containing disk space status.
         """
-        result = {
+        result: Dict[str, Any] = {
             "mount_points": [],
             "threshold_exceeded": False,
         }
@@ -264,7 +264,7 @@ class ResourceMonitor:
                 if not path or not os.path.exists(path):
                     continue
 
-                mp_result = {
+                mp_result: Dict[str, Any] = {
                     "path": path,
                     "total_gb": None,
                     "free_gb": None,
@@ -339,7 +339,7 @@ class ResourceMonitor:
             return None
 
         logger.info("Executing high CPU recovery actions")
-        action_details: Dict = {
+        action_details: Dict[str, Any] = {
             "services": [],
             "recovery_command": None,
             "recovery_command_success": None,
@@ -460,7 +460,7 @@ class ResourceMonitor:
             config: Recovery configuration dictionary.
         """
         restart_interval = config.get("restart_interval", 5)
-        results: List[Dict] = []
+        results: List[Dict[str, Any]] = []
 
         for service_name in services:
             try:
@@ -519,7 +519,7 @@ class ResourceMonitor:
         """
         self.last_action_time[action_type] = time.time()
 
-    def _evaluate_action_success(self, action_details: Dict) -> bool:
+    def _evaluate_action_success(self, action_details: Dict[str, Any]) -> bool:
         """Evaluate overall success for resource recovery actions.
 
         Args:
@@ -545,7 +545,7 @@ class ResourceMonitor:
         Returns:
             Dictionary containing current resource statistics.
         """
-        stats = {
+        stats: Dict[str, Any] = {
             "timestamp": time.time(),
             "cpu": {},
             "memory": {},

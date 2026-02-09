@@ -22,7 +22,7 @@ import os
 import re
 from typing import Any, Dict
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 logger = logging.getLogger(__name__)
 

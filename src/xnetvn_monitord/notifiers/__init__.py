@@ -23,7 +23,7 @@ import re
 import socket
 import time
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from .discord_notifier import DiscordNotifier
 from .email_notifier import EmailNotifier
@@ -642,7 +642,7 @@ class NotificationManager:
 
         return filtered_content
 
-    def _filter_dict_content(self, data: Dict) -> Dict:
+    def _filter_dict_content(self, data: Dict[str, Any]) -> Any:
         """Recursively filter sensitive information from dictionary.
 
         Args:
