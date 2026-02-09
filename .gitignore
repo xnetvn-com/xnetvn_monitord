@@ -94,10 +94,9 @@ tmp/
 temp/
 *.tmp
 # Security scan outputs and debug helpers
-bandit-results.json
-bandit-results.sarif
-debug_convert_bandit.py
-.tmp_check_yaml.py
+bandit-results.*
+debug_convert_bandit*
+.tmp_*
 
 # OS specific
 Thumbs.db
