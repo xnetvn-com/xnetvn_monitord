@@ -2,6 +2,11 @@
 
 **Automated Server Monitoring and Service Recovery for Linux**
 
+[![CI](https://github.com/xnetvn-com/xnetvn_monitord/workflows/CI/badge.svg)](https://github.com/xnetvn-com/xnetvn_monitord/actions/workflows/ci.yml)
+[![Security Scan](https://github.com/xnetvn-com/xnetvn_monitord/workflows/Security%20Scan/badge.svg)](https://github.com/xnetvn-com/xnetvn_monitord/actions/workflows/security-scan.yml)
+[![CodeQL](https://github.com/xnetvn-com/xnetvn_monitord/workflows/CodeQL%20Advanced/badge.svg)](https://github.com/xnetvn-com/xnetvn_monitord/actions/workflows/codeql.yml)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
 [Vietnamese Documentation](docs/vi/README.md) | [English Documentation](docs/en/README.md)
 
 ---
