@@ -1428,18 +1428,18 @@ class TestServiceMonitorRestartLogic:
 
         assert monitor._restart_service(service_config) is True
 
+        # The implementation uses shlex.split() to parse commands into argument lists
+        # and calls subprocess.run() without shell=True (more secure)
         mock_run.assert_has_calls(
             [
                 call(
-                    "systemctl restart nginx",
-                    shell=True,
+                    ["systemctl", "restart", "nginx"],
                     capture_output=True,
                     text=True,
                     timeout=60,
                 ),
                 call(
-                    "bash /opt/xnetvn_monitord/scripts/custom-restart.sh",
-                    shell=True,
+                    ["bash", "/opt/xnetvn_monitord/scripts/custom-restart.sh"],
                     capture_output=True,
                     text=True,
                     timeout=60,

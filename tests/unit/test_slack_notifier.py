@@ -134,9 +134,9 @@ class TestSlackNotifier:
         assert notifier.test_connection() is True
 
     def test_should_use_unverified_ssl_context_when_disabled(self, mocker):
-        """Test SSL verification disabled uses unverified context."""
+        """Test SSL verification disabled uses default context with verification disabled."""
         context_mock = mocker.patch(
-            "ssl._create_unverified_context",
+            "ssl.create_default_context",
             return_value=ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT),
         )
         urlopen_mock = mocker.patch("urllib.request.urlopen", return_value=DummyResponse())
@@ -151,4 +151,9 @@ class TestSlackNotifier:
 
         assert notifier.send_notification("test") is True
         context_mock.assert_called_once()
+        # Verify that the SSL context is passed to urlopen
         assert urlopen_mock.call_args.kwargs.get("context") is not None
+        # Verify that SSL verification was disabled on the context
+        context = context_mock.return_value
+        assert context.check_hostname is False
+        assert context.verify_mode == ssl.CERT_NONE
