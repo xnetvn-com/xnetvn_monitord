@@ -46,4 +46,7 @@ pre-commit>=3.3.0              # Git pre-commit hooks
 
 # Monitoring and Debugging
 psutil>=5.9.5                  # System monitoring (already in base, but ensure latest)
+# Type stubs for third-party libraries used by mypy
+types-psutil>=5.9.5            # Type hints for psutil
+types-PySocks>=1.7.1           # Type hints for PySocks
 requests>=2.31.0               # HTTP library for testing integrations
