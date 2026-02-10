@@ -4,9 +4,9 @@ name: Security Scan
 # yamllint disable=truthy
 on:
   push:
-    branches: [main, development]
+    branches: [main, feature/**, hotfix/**, release/**, bugfix/**, chore/**, refactor/**]
   pull_request:
-    branches: [main, development]
+    branches: [main]
   schedule:
     - cron: '17 2 * * 1'
   workflow_dispatch: {}
