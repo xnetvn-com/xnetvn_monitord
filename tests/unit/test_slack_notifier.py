@@ -15,9 +15,10 @@
 """Unit tests for SlackNotifier."""
 
 import ssl
-import urllib.error
+from urllib.error import URLError
 
 from xnetvn_monitord.notifiers.slack_notifier import SlackNotifier
+from xnetvn_monitord.utils.network import ProxyConfigurationError
 
 
 class DummyResponse:
@@ -82,7 +83,7 @@ class TestSlackNotifier:
 
     def test_should_send_notification(self, mocker):
         """Test successful Slack notification."""
-        mocker.patch("urllib.request.urlopen", return_value=DummyResponse())
+        mocker.patch("xnetvn_monitord.notifiers.slack_notifier.open_url", return_value=DummyResponse())
 
         notifier = SlackNotifier({"enabled": True, "webhook_url": "https://example.com"})
 
@@ -90,7 +91,10 @@ class TestSlackNotifier:
 
     def test_should_return_false_on_non_2xx_status(self, mocker):
         """Test non-2xx response returns False."""
-        mocker.patch("urllib.request.urlopen", return_value=DummyResponse(status=500))
+        mocker.patch(
+            "xnetvn_monitord.notifiers.slack_notifier.open_url",
+            return_value=DummyResponse(status=500),
+        )
 
         notifier = SlackNotifier({"enabled": True, "webhook_url": "https://example.com"})
 
@@ -98,7 +102,10 @@ class TestSlackNotifier:
 
     def test_should_return_false_on_url_error(self, mocker):
         """Test URL error returns False."""
-        mocker.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("down"))
+        mocker.patch(
+            "xnetvn_monitord.notifiers.slack_notifier.open_url",
+            side_effect=URLError("down"),
+        )
 
         notifier = SlackNotifier({"enabled": True, "webhook_url": "https://example.com"})
 
@@ -121,7 +128,7 @@ class TestSlackNotifier:
 
     def test_should_run_live_test_when_enabled(self, mocker):
         """Test live test executes when test_on_startup is enabled."""
-        mocker.patch("urllib.request.urlopen", return_value=DummyResponse())
+        mocker.patch("xnetvn_monitord.notifiers.slack_notifier.open_url", return_value=DummyResponse())
 
         notifier = SlackNotifier(
             {
@@ -139,7 +146,10 @@ class TestSlackNotifier:
             "ssl.create_default_context",
             return_value=ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT),
         )
-        urlopen_mock = mocker.patch("urllib.request.urlopen", return_value=DummyResponse())
+        open_url_mock = mocker.patch(
+            "xnetvn_monitord.notifiers.slack_notifier.open_url",
+            return_value=DummyResponse(),
+        )
 
         notifier = SlackNotifier(
             {
@@ -151,9 +161,26 @@ class TestSlackNotifier:
 
         assert notifier.send_notification("test") is True
         context_mock.assert_called_once()
-        # Verify that the SSL context is passed to urlopen
-        assert urlopen_mock.call_args.kwargs.get("context") is not None
+        # Verify that the SSL context is passed to open_url
+        assert open_url_mock.call_args[0][2] is not None
         # Verify that SSL verification was disabled on the context
         context = context_mock.return_value
         assert context.check_hostname is False
         assert context.verify_mode == ssl.CERT_NONE
+
+    def test_should_return_false_on_proxy_error(self, mocker):
+        """Test proxy configuration errors return False."""
+        mocker.patch(
+            "xnetvn_monitord.notifiers.slack_notifier.open_url",
+            side_effect=ProxyConfigurationError("proxy error"),
+        )
+
+        notifier = SlackNotifier(
+            {
+                "enabled": True,
+                "webhook_url": "https://example.com",
+                "proxy": {"enabled": True, "uri": "http://127.0.0.1:8080"},
+            }
+        )
+
+        assert notifier.send_notification("test") is False

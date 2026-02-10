@@ -41,11 +41,17 @@ Các khối chính:
 - only_ipv4: khi bật, tất cả kết nối outbound chỉ dùng IPv4.
   Áp dụng cho HTTP checks, webhook notifications và update checks.
 
+Proxy được cấu hình theo từng dịch vụ (update_checker, HTTP checks trong
+service_monitor, và từng kênh notification) thay vì cấu hình toàn cục.
+
 ## update_checker
 
 ```yaml
 update_checker:
   enabled: true
+  proxy:
+    enabled: true
+    uri: "${PROXY_URI}"
   interval:
     value: 1
     unit: "weeks"
@@ -106,6 +112,18 @@ service_monitor:
       restart_command:
         - "systemctl restart nginx"
         - "bash /opt/xnetvn_monitord/scripts/custom-restart.sh"
+
+Ví dụ proxy theo từng dịch vụ (chỉ áp dụng HTTP/HTTPS checks):
+
+```yaml
+service_monitor:
+  services:
+    - name: "web_homepage"
+      check_method: "https"
+      url: "https://example.com/health"
+      proxy:
+        enabled: true
+        uri: "${PROXY_URI}"
 ```
 
 ## resource_monitor
@@ -197,4 +215,17 @@ notifications:
     channel: "#server-alerts"
     username: "xNetVN Monitor"
     test_on_startup: false
+
+Ví dụ proxy cho Telegram:
+
+```yaml
+notifications:
+  telegram:
+    enabled: true
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    chat_ids: ["-100123456"]
+    proxy:
+      enabled: true
+      uri: "${PROXY_URI}"
+```
 ```

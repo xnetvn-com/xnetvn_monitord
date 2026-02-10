@@ -15,10 +15,11 @@
 """Unit tests for TelegramNotifier."""
 
 import json
-import urllib.error
-import urllib.parse
+from urllib.error import URLError
+from urllib.parse import parse_qs
 
 from xnetvn_monitord.notifiers.telegram_notifier import TelegramNotifier
+from xnetvn_monitord.utils.network import ProxyConfigurationError
 
 
 class DummyResponse:
@@ -90,7 +91,7 @@ class TestTelegramNotifierSendMessage:
     def test_should_return_true_on_success(self, mocker):
         """Test successful API response."""
         mocker.patch(
-            "urllib.request.urlopen",
+            "xnetvn_monitord.notifiers.telegram_notifier.open_url",
             return_value=DummyResponse({"ok": True, "result": {"message_id": 1}}),
         )
 
@@ -107,7 +108,7 @@ class TestTelegramNotifierSendMessage:
     def test_should_return_false_on_api_error(self, mocker):
         """Test API returns ok=false."""
         mocker.patch(
-            "urllib.request.urlopen",
+            "xnetvn_monitord.notifiers.telegram_notifier.open_url",
             return_value=DummyResponse({"ok": False, "description": "fail"}),
         )
 
@@ -123,7 +124,10 @@ class TestTelegramNotifierSendMessage:
 
     def test_should_handle_url_error(self, mocker):
         """Test URL error handling."""
-        mocker.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("fail"))
+        mocker.patch(
+            "xnetvn_monitord.notifiers.telegram_notifier.open_url",
+            side_effect=URLError("fail"),
+        )
 
         notifier = TelegramNotifier(
             {
@@ -137,7 +141,10 @@ class TestTelegramNotifierSendMessage:
 
     def test_should_handle_generic_exception(self, mocker):
         """Test generic exception handling in send message."""
-        mocker.patch("urllib.request.urlopen", side_effect=ValueError("fail"))
+        mocker.patch(
+            "xnetvn_monitord.notifiers.telegram_notifier.open_url",
+            side_effect=ValueError("fail"),
+        )
 
         notifier = TelegramNotifier(
             {
@@ -153,11 +160,11 @@ class TestTelegramNotifierSendMessage:
         """Test message thread id is included in send payload."""
         captured = {}
 
-        def fake_urlopen(request, timeout):
+        def fake_open_url(request, timeout, ssl_context, proxy_config, only_ipv4):
             captured["data"] = request.data
             return DummyResponse({"ok": True, "result": {"message_id": 1}})
 
-        mocker.patch("urllib.request.urlopen", side_effect=fake_urlopen)
+        mocker.patch("xnetvn_monitord.notifiers.telegram_notifier.open_url", side_effect=fake_open_url)
 
         notifier = TelegramNotifier(
             {
@@ -169,8 +176,26 @@ class TestTelegramNotifierSendMessage:
 
         assert notifier._send_message("-100123", "message", 456) is True
 
-        parsed = urllib.parse.parse_qs(captured["data"].decode("utf-8"))
+        parsed = parse_qs(captured["data"].decode("utf-8"))
         assert parsed["message_thread_id"] == ["456"]
+
+    def test_should_return_false_on_proxy_error(self, mocker):
+        """Test proxy configuration errors return False."""
+        mocker.patch(
+            "xnetvn_monitord.notifiers.telegram_notifier.open_url",
+            side_effect=ProxyConfigurationError("proxy error"),
+        )
+
+        notifier = TelegramNotifier(
+            {
+                "enabled": True,
+                "bot_token": "token",
+                "chat_ids": ["1"],
+                "proxy": {"enabled": True, "uri": "http://127.0.0.1:8080"},
+            }
+        )
+
+        assert notifier._send_message("1", "message") is False
 
 
 class TestTelegramNotifierFormatting:
@@ -283,7 +308,7 @@ class TestTelegramNotifierConnection:
     def test_should_return_true_on_success(self, mocker):
         """Test successful connection check."""
         mocker.patch(
-            "urllib.request.urlopen",
+            "xnetvn_monitord.notifiers.telegram_notifier.open_url",
             return_value=DummyResponse({"ok": True, "result": {"username": "bot"}}),
         )
 
@@ -294,7 +319,7 @@ class TestTelegramNotifierConnection:
     def test_should_return_false_on_api_error(self, mocker):
         """Test connection check API error."""
         mocker.patch(
-            "urllib.request.urlopen",
+            "xnetvn_monitord.notifiers.telegram_notifier.open_url",
             return_value=DummyResponse({"ok": False, "description": "fail"}),
         )
 

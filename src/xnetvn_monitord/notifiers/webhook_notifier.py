@@ -24,7 +24,13 @@ import urllib.error
 import urllib.request
 from typing import Dict, List, Optional
 
-from xnetvn_monitord.utils.network import force_ipv4, is_http_url
+from xnetvn_monitord.utils.network import (
+    ProxyConfigurationError,
+    is_http_url,
+    mask_proxy_uri,
+    open_url,
+    resolve_proxy_uri,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +52,7 @@ class WebhookNotifier:
         self.verify_ssl = config.get("verify_ssl", True)
         self.test_on_startup = config.get("test_on_startup", False)
         self.only_ipv4 = config.get("only_ipv4", False)
+        self.proxy_config = config.get("proxy")
 
     def send_notification(self, payload: Dict, extra_headers: Optional[Dict] = None) -> bool:
         """Send a JSON payload to all configured webhook URLs.
@@ -136,22 +143,28 @@ class WebhookNotifier:
                 ssl_context.check_hostname = False
                 ssl_context.verify_mode = ssl.CERT_NONE
 
-            with force_ipv4(self.only_ipv4):
-                with urllib.request.urlopen(  # nosec B310
-                    request,
-                    timeout=self.timeout,
-                    context=ssl_context,
-                ) as response:
-                    status_code = getattr(response, "status", response.getcode())
-                    if 200 <= status_code < 300:
-                        logger.debug("Webhook POST succeeded: %s", url)
-                        return True
+            with open_url(
+                request,
+                self.timeout,
+                ssl_context,
+                self.proxy_config,
+                self.only_ipv4,
+            ) as response:  # nosec B310
+                status_code = getattr(response, "status", response.getcode())
+                if 200 <= status_code < 300:
+                    logger.debug("Webhook POST succeeded: %s", url)
+                    return True
 
-                    logger.error("Webhook POST failed (%s): %s", status_code, url)
-                    return False
+                logger.error("Webhook POST failed (%s): %s", status_code, url)
+                return False
 
         except urllib.error.URLError as exc:
             logger.error("Webhook URL error for %s: %s", url, exc)
+            return False
+        except ProxyConfigurationError as exc:
+            proxy_uri = resolve_proxy_uri(self.proxy_config)
+            proxy_label = mask_proxy_uri(proxy_uri) if proxy_uri else "unknown"
+            logger.error("Webhook proxy configuration error (%s): %s", proxy_label, exc)
             return False
         except Exception as exc:
             logger.error("Webhook POST error for %s: %s", url, exc, exc_info=True)

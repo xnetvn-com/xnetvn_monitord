@@ -27,6 +27,12 @@ runs:
         cache: 'pip'
         cache-dependency-path: ${{ inputs.cache-dependency-path }}
 
+    - name: Install OS packages (needed for some Python versions)
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-distutils python3-venv build-essential
+
     - name: Install dependencies
       if: inputs.install-dependencies == 'true'
       shell: bash

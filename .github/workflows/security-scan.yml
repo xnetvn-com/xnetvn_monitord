@@ -4,9 +4,9 @@ name: Security Scan
 # yamllint disable=truthy
 on:
   push:
-    branches: [main, development]
+    branches: [main, feature/**, hotfix/**, release/**, bugfix/**, chore/**, refactor/**]
   pull_request:
-    branches: [main, development]
+    branches: [main]
   schedule:
     - cron: '17 2 * * 1'
   workflow_dispatch: {}
@@ -35,6 +35,8 @@ jobs:
 
       - name: Install dependencies
         run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-distutils python3-venv build-essential || true
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
           pip install pip-audit

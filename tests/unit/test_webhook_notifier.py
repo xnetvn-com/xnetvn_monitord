@@ -14,9 +14,10 @@
 
 """Unit tests for WebhookNotifier."""
 
-import urllib.error
+from urllib.error import URLError
 
 from xnetvn_monitord.notifiers.webhook_notifier import WebhookNotifier
+from xnetvn_monitord.utils.network import ProxyConfigurationError
 
 
 class DummyResponse:
@@ -53,7 +54,7 @@ class TestWebhookNotifier:
 
     def test_should_send_payload(self, mocker):
         """Test successful webhook payload delivery."""
-        mocker.patch("urllib.request.urlopen", return_value=DummyResponse())
+        mocker.patch("xnetvn_monitord.notifiers.webhook_notifier.open_url", return_value=DummyResponse())
 
         notifier = WebhookNotifier({"enabled": True, "urls": ["https://example.com"]})
 
@@ -68,7 +69,7 @@ class TestWebhookNotifier:
             return mocker.Mock()
 
         mocker.patch("urllib.request.Request", side_effect=fake_request)
-        mocker.patch("urllib.request.urlopen", return_value=DummyResponse())
+        mocker.patch("xnetvn_monitord.notifiers.webhook_notifier.open_url", return_value=DummyResponse())
 
         notifier = WebhookNotifier({"enabled": True, "urls": ["https://example.com"], "headers": {"X-Base": "1"}})
 
@@ -79,7 +80,7 @@ class TestWebhookNotifier:
     def test_should_send_payload_when_some_endpoints_fail(self, mocker):
         """Test success when at least one endpoint returns 2xx."""
         mocker.patch(
-            "urllib.request.urlopen",
+            "xnetvn_monitord.notifiers.webhook_notifier.open_url",
             side_effect=[DummyResponse(status=500), DummyResponse(status=204)],
         )
 
@@ -89,7 +90,10 @@ class TestWebhookNotifier:
 
     def test_should_return_false_on_non_2xx_status(self, mocker):
         """Test non-2xx response returns False."""
-        mocker.patch("urllib.request.urlopen", return_value=DummyResponse(status=500))
+        mocker.patch(
+            "xnetvn_monitord.notifiers.webhook_notifier.open_url",
+            return_value=DummyResponse(status=500),
+        )
 
         notifier = WebhookNotifier({"enabled": True, "urls": ["https://example.com"]})
 
@@ -97,7 +101,10 @@ class TestWebhookNotifier:
 
     def test_should_return_false_on_url_error(self, mocker):
         """Test URL error returns False."""
-        mocker.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("down"))
+        mocker.patch(
+            "xnetvn_monitord.notifiers.webhook_notifier.open_url",
+            side_effect=URLError("down"),
+        )
 
         notifier = WebhookNotifier({"enabled": True, "urls": ["https://example.com"]})
 
@@ -120,7 +127,7 @@ class TestWebhookNotifier:
 
     def test_should_run_live_test_when_enabled(self, mocker):
         """Test live test executes when test_on_startup is enabled."""
-        mocker.patch("urllib.request.urlopen", return_value=DummyResponse())
+        mocker.patch("xnetvn_monitord.notifiers.webhook_notifier.open_url", return_value=DummyResponse())
 
         notifier = WebhookNotifier(
             {
@@ -146,8 +153,28 @@ class TestWebhookNotifier:
 
     def test_should_return_false_when_all_endpoints_fail(self, mocker):
         """Test send_notification returns False when all endpoints fail."""
-        mocker.patch("urllib.request.urlopen", return_value=DummyResponse(status=500))
+        mocker.patch(
+            "xnetvn_monitord.notifiers.webhook_notifier.open_url",
+            return_value=DummyResponse(status=500),
+        )
 
         notifier = WebhookNotifier({"enabled": True, "urls": ["https://one.example", "https://two.example"]})
+
+        assert notifier.send_notification({"event": "test"}) is False
+
+    def test_should_return_false_on_proxy_error(self, mocker):
+        """Test proxy configuration errors return False."""
+        mocker.patch(
+            "xnetvn_monitord.notifiers.webhook_notifier.open_url",
+            side_effect=ProxyConfigurationError("proxy error"),
+        )
+
+        notifier = WebhookNotifier(
+            {
+                "enabled": True,
+                "urls": ["https://example.com"],
+                "proxy": {"enabled": True, "uri": "http://127.0.0.1:8080"},
+            }
+        )
 
         assert notifier.send_notification({"event": "test"}) is False

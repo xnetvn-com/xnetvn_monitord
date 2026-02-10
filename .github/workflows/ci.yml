@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, feature/**, hotfix/**, release/**, bugfix/**, chore/**, refactor/** ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -53,7 +53,8 @@ jobs:
 
       - name: Mypy
         continue-on-error: true
-        run: python -m mypy src
+        run: |
+          python -m mypy --install-types --non-interactive src
 
       - name: ShellCheck scripts
         run: shellcheck scripts/*.sh
@@ -122,6 +123,8 @@ jobs:
 
       - name: Install dependencies
         run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-distutils python3-venv build-essential || true
           python -m pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
 

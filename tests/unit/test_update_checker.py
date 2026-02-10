@@ -20,6 +20,7 @@ import json
 import shutil
 import tarfile
 from pathlib import Path
+from typing import Any
 
 from xnetvn_monitord.utils.update_checker import (
     ReleaseInfo,
@@ -27,6 +28,22 @@ from xnetvn_monitord.utils.update_checker import (
     UpdateCheckResult,
     compare_versions,
 )
+
+
+class DummyResponse:
+    """Minimal response stub for open_url."""
+
+    def __init__(self, payload: dict):
+        self._payload = payload
+
+    def read(self) -> bytes:
+        return json.dumps(self._payload).encode("utf-8")
+
+    def __enter__(self) -> "DummyResponse":
+        return self
+
+    def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> bool:
+        return False
 
 
 def _build_config(state_file: Path) -> dict:
@@ -159,6 +176,37 @@ class TestUpdateCheckerResults:
         assert result.update_available is False
         assert "Failed to fetch" in result.message
 
+    def test_should_use_proxy_config_for_update_check(self, tmp_path, monkeypatch) -> None:
+        """Ensure proxy config is passed to open_url for update checks."""
+        state_file = tmp_path / "state.json"
+        config = _build_config(state_file)
+        config["proxy"] = {"enabled": True, "uri": "http://127.0.0.1:8080"}
+
+        checker = UpdateChecker(
+            config,
+            current_version="1.0.0",
+            install_dir=tmp_path,
+        )
+
+        captured = {}
+
+        def fake_open_url(request_obj, timeout, ssl_context, proxy_config, only_ipv4):
+            captured["proxy_config"] = proxy_config
+            return DummyResponse(
+                {
+                    "tag_name": "v1.0.0",
+                    "tarball_url": "https://example.com/tar.gz",
+                    "html_url": "https://example.com/release",
+                }
+            )
+
+        monkeypatch.setattr("xnetvn_monitord.utils.update_checker.open_url", fake_open_url)
+
+        result = checker.check_for_updates()
+
+        assert result.checked is True
+        assert captured["proxy_config"] == config["proxy"]
+
 
 class TestUpdateCheckerApplyUpdate:
     """Tests for applying updates and refreshing example files."""
@@ -193,12 +241,18 @@ class TestUpdateCheckerApplyUpdate:
         with tarfile.open(tarball_path, "w:gz") as tar_handle:
             tar_handle.add(package_root, arcname=package_root.name)
 
-        def _fake_urlretrieve(url: str, filename: str) -> None:
-            shutil.copy(tarball_path, filename)
+        def _fake_download(
+            url: str,
+            target_path: str,
+            timeout: int,
+            proxy_config: dict,
+            only_ipv4: bool,
+        ) -> None:
+            shutil.copy(tarball_path, target_path)
 
         monkeypatch.setattr(
-            "xnetvn_monitord.utils.update_checker.request.urlretrieve",
-            _fake_urlretrieve,
+            "xnetvn_monitord.utils.update_checker.download_url_to_file",
+            _fake_download,
         )
 
         state_file = tmp_path / "state.json"

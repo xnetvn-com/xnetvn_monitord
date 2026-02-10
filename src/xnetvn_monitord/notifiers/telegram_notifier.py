@@ -25,7 +25,13 @@ import urllib.parse
 import urllib.request
 from typing import Dict, Optional, Tuple
 
-from xnetvn_monitord.utils.network import force_ipv4, is_http_url
+from xnetvn_monitord.utils.network import (
+    ProxyConfigurationError,
+    is_http_url,
+    mask_proxy_uri,
+    open_url,
+    resolve_proxy_uri,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +54,7 @@ class TelegramNotifier:
         self.timeout = config.get("timeout", 30)
         self.hostname = socket.gethostname()
         self.only_ipv4 = config.get("only_ipv4", False)
+        self.proxy_config = config.get("proxy")
         self.api_base_url = f"https://api.telegram.org/bot{self.bot_token}"
 
     def send_notification(self, message: str) -> bool:
@@ -117,18 +124,28 @@ class TelegramNotifier:
             encoded_data = urllib.parse.urlencode(data).encode("utf-8")
             request = urllib.request.Request(url, data=encoded_data, method="POST")
 
-            with force_ipv4(self.only_ipv4):
-                with urllib.request.urlopen(request, timeout=self.timeout) as response:  # nosec B310
-                    result = json.loads(response.read().decode("utf-8"))
-                    if result.get("ok"):
-                        logger.debug("Telegram message sent successfully to chat %s", chat_id)
-                        return True
-                    logger.error(
-                        "Telegram API error for chat %s: %s",
-                        chat_id,
-                        result.get("description"),
-                    )
-                    return False
+            with open_url(
+                request,
+                self.timeout,
+                None,
+                self.proxy_config,
+                self.only_ipv4,
+            ) as response:  # nosec B310
+                result = json.loads(response.read().decode("utf-8"))
+                if result.get("ok"):
+                    logger.debug("Telegram message sent successfully to chat %s", chat_id)
+                    return True
+                logger.error(
+                    "Telegram API error for chat %s: %s",
+                    chat_id,
+                    result.get("description"),
+                )
+                return False
+        except ProxyConfigurationError as e:
+            proxy_uri = resolve_proxy_uri(self.proxy_config)
+            proxy_label = mask_proxy_uri(proxy_uri) if proxy_uri else "unknown"
+            logger.error("Telegram proxy configuration error (%s): %s", proxy_label, e)
+            return False
         except Exception as e:
             logger.error(f"Error sending Telegram message to {chat_id}: {str(e)}", exc_info=True)
             return False
@@ -340,22 +357,33 @@ _xNetVN Monitor_
                 return False
             request = urllib.request.Request(url, method="GET")
 
-            with force_ipv4(self.only_ipv4):
-                with urllib.request.urlopen(request, timeout=self.timeout) as response:  # nosec B310
-                    result = json.loads(response.read().decode("utf-8"))
-                    if result.get("ok"):
-                        bot_info = result.get("result", {})
-                        bot_name = bot_info.get("username", "Unknown")
-                        logger.info(
-                            "Telegram bot connection test successful. Bot: @%s",
-                            bot_name,
-                        )
-                        return True
-                    logger.error(
-                        "Telegram API error: %s",
-                        result.get("description"),
+            with open_url(
+                request,
+                self.timeout,
+                None,
+                self.proxy_config,
+                self.only_ipv4,
+            ) as response:  # nosec B310
+                result = json.loads(response.read().decode("utf-8"))
+                if result.get("ok"):
+                    bot_info = result.get("result", {})
+                    bot_name = bot_info.get("username", "Unknown")
+                    logger.info(
+                        "Telegram bot connection test successful. Bot: @%s",
+                        bot_name,
                     )
-                    return False
+                    return True
+                logger.error(
+                    "Telegram API error: %s",
+                    result.get("description"),
+                )
+                return False
+
+        except ProxyConfigurationError as e:
+            proxy_uri = resolve_proxy_uri(self.proxy_config)
+            proxy_label = mask_proxy_uri(proxy_uri) if proxy_uri else "unknown"
+            logger.error("Telegram proxy configuration error (%s): %s", proxy_label, e)
+            return False
 
         except Exception as e:
             logger.error(f"Telegram connection test failed: {str(e)}")

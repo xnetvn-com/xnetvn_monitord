@@ -41,11 +41,17 @@ Primary sections:
 - only_ipv4: when true, outbound DNS resolution and HTTP calls use IPv4 only.
   This applies to service HTTP checks, notification webhooks, and update checks.
 
+Proxy is configured per-service (update_checker, service_monitor HTTP checks,
+and each notification channel) rather than globally.
+
 ## update_checker
 
 ```yaml
 update_checker:
   enabled: true
+  proxy:
+    enabled: true
+    uri: "${PROXY_URI}"
   interval:
     value: 1
     unit: "weeks"
@@ -107,6 +113,18 @@ service_monitor:
       restart_command:
         - "systemctl restart nginx"
         - "bash /opt/xnetvn_monitord/scripts/custom-restart.sh"
+
+Per-service proxy example (HTTP/HTTPS checks only):
+
+```yaml
+service_monitor:
+  services:
+    - name: "web_homepage"
+      check_method: "https"
+      url: "https://example.com/health"
+      proxy:
+        enabled: true
+        uri: "${PROXY_URI}"
 ```
 
 ## resource_monitor
@@ -199,4 +217,17 @@ notifications:
     channel: "#server-alerts"
     username: "xNetVN Monitor"
     test_on_startup: false
+
+Telegram proxy example:
+
+```yaml
+notifications:
+  telegram:
+    enabled: true
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    chat_ids: ["-100123456"]
+    proxy:
+      enabled: true
+      uri: "${PROXY_URI}"
+```
 ```

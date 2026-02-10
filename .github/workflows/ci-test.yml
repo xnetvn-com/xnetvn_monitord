@@ -31,6 +31,8 @@ jobs:
 
       - name: Install dependencies
         run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-distutils python3-venv build-essential || true
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
@@ -39,8 +41,17 @@ jobs:
           PYTHONPATH: src
         run: pytest -q
 
+      - name: Check coverage files
+        id: coverage_check
+        run: |
+          if [ -f coverage.xml ] || [ -d htmlcov ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Upload coverage artifacts
-        if: always()
+        if: always() && steps.coverage_check.outputs.found == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-artifacts

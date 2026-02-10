@@ -15,25 +15,26 @@
 [tool.black]
 line-length = 120
 target-version = ["py38", "py39", "py310", "py311"]
-include = "\\.pyi?$"
-exclude = """
+include = '\.pyi?$'
+exclude = '''
 /(
-    \\.eggs
-  | \\.git
-  | \\.mypy_cache
-  | \\.tox
-  | \\.venv
+    \.eggs
+  | \.git
+  | \.mypy_cache
+  | \.tox
+  | \.venv
   | build
   | dist
   | htmlcov
-  | \\.local
+  | \.local
   | __pycache__
+  | debug
 )/
-"""
+'''
 
 [tool.isort]
 profile = "black"
 line_length = 120
 known_first_party = ["xnetvn_monitord"]
 src_paths = ["src", "tests"]
-skip = ["htmlcov", ".local", ".venv", "build", "dist"]
+skip = ["htmlcov", ".local", ".venv", "build", "dist", "debug"]

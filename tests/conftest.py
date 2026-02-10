@@ -70,6 +70,9 @@ def sample_config() -> Dict:
                 "backup_count": 10,
             },
         },
+        "network": {
+            "only_ipv4": False,
+        },
         "service_monitor": {
             "enabled": True,
             "action_on_failure": "restart_and_notify",
