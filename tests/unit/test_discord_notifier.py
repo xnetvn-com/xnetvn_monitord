@@ -17,6 +17,7 @@
 import ssl
 import urllib.error
 
+from xnetvn_monitord.utils.network import ProxyConfigurationError
 from xnetvn_monitord.notifiers.discord_notifier import DiscordNotifier
 
 
@@ -167,7 +168,7 @@ class TestDiscordNotifier:
         """Test proxy configuration errors return False."""
         mocker.patch(
             "xnetvn_monitord.notifiers.discord_notifier.open_url",
-            side_effect=ValueError("proxy error"),
+            side_effect=ProxyConfigurationError("proxy error"),
         )
 
         notifier = DiscordNotifier(

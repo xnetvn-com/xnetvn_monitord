@@ -604,7 +604,6 @@ class ServiceMonitor:
         start_time = time.monotonic()
         try:
             proxy_config = service_config.get("proxy", self.proxy_config)
-            proxy_uri = resolve_proxy_uri(proxy_config)
             with open_url(
                 request,
                 timeout_seconds,

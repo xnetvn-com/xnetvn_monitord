@@ -125,7 +125,6 @@ service_monitor:
         enabled: true
         uri: "${PROXY_URI}"
 ```
-```
 
 ## resource_monitor
 

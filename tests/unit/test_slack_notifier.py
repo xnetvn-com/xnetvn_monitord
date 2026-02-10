@@ -17,6 +17,7 @@
 import ssl
 import urllib.error
 
+from xnetvn_monitord.utils.network import ProxyConfigurationError
 from xnetvn_monitord.notifiers.slack_notifier import SlackNotifier
 
 
@@ -171,7 +172,7 @@ class TestSlackNotifier:
         """Test proxy configuration errors return False."""
         mocker.patch(
             "xnetvn_monitord.notifiers.slack_notifier.open_url",
-            side_effect=ValueError("proxy error"),
+            side_effect=ProxyConfigurationError("proxy error"),
         )
 
         notifier = SlackNotifier(

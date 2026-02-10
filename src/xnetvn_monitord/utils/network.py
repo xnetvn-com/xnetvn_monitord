@@ -263,6 +263,11 @@ def open_url(
     Returns:
         urllib response handle.
     """
+    # Validate request URL scheme to avoid allowing file:/ or other unexpected schemes
+    url = request_obj.full_url if hasattr(request_obj, "full_url") else request_obj.get_full_url()
+    if not is_http_url(url):
+        raise ValueError(f"Unsupported URL scheme: {urlparse(url).scheme}")
+
     proxy_uri = resolve_proxy_uri(proxy_config)
     if not proxy_uri:
         with force_ipv4(only_ipv4):
