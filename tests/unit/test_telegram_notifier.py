@@ -15,11 +15,11 @@
 """Unit tests for TelegramNotifier."""
 
 import json
-import urllib.error
-import urllib.parse
+from urllib.error import URLError
+from urllib.parse import parse_qs
 
-from xnetvn_monitord.utils.network import ProxyConfigurationError
 from xnetvn_monitord.notifiers.telegram_notifier import TelegramNotifier
+from xnetvn_monitord.utils.network import ProxyConfigurationError
 
 
 class DummyResponse:
@@ -126,7 +126,7 @@ class TestTelegramNotifierSendMessage:
         """Test URL error handling."""
         mocker.patch(
             "xnetvn_monitord.notifiers.telegram_notifier.open_url",
-            side_effect=urllib.error.URLError("fail"),
+            side_effect=URLError("fail"),
         )
 
         notifier = TelegramNotifier(
@@ -176,7 +176,7 @@ class TestTelegramNotifierSendMessage:
 
         assert notifier._send_message("-100123", "message", 456) is True
 
-        parsed = urllib.parse.parse_qs(captured["data"].decode("utf-8"))
+        parsed = parse_qs(captured["data"].decode("utf-8"))
         assert parsed["message_thread_id"] == ["456"]
 
     def test_should_return_false_on_proxy_error(self, mocker):

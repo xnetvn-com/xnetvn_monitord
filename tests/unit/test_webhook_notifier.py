@@ -14,10 +14,10 @@
 
 """Unit tests for WebhookNotifier."""
 
-import urllib.error
+from urllib.error import URLError
 
-from xnetvn_monitord.utils.network import ProxyConfigurationError
 from xnetvn_monitord.notifiers.webhook_notifier import WebhookNotifier
+from xnetvn_monitord.utils.network import ProxyConfigurationError
 
 
 class DummyResponse:
@@ -103,7 +103,7 @@ class TestWebhookNotifier:
         """Test URL error returns False."""
         mocker.patch(
             "xnetvn_monitord.notifiers.webhook_notifier.open_url",
-            side_effect=urllib.error.URLError("down"),
+            side_effect=URLError("down"),
         )
 
         notifier = WebhookNotifier({"enabled": True, "urls": ["https://example.com"]})
