@@ -22,11 +22,13 @@ import ssl
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Dict, Iterator, List, Optional, Tuple
+from types import ModuleType
 from urllib.parse import unquote, urlparse
 from urllib.request import HTTPSHandler, OpenerDirector, ProxyHandler, Request, build_opener, urlopen
 
+socks: Optional[ModuleType] = None
 try:
-    import socks
+    import socks  # type: ignore
 
     _SOCKS_AVAILABLE = True
 except ImportError:  # pragma: no cover - optional dependency
@@ -200,8 +202,14 @@ def _use_socks_proxy(proxy_info: ProxyInfo) -> Iterator[None]:
     if not _SOCKS_AVAILABLE:
         raise ProxyConfigurationError("SOCKS proxy requested but PySocks is not installed")
 
-    proxy_type = socks.SOCKS5
-    socks.set_default_proxy(
+    # Help type checkers understand that `socks` is available here and allow
+    # attribute access. Use a local Any-typed reference to avoid ModuleType
+    # attribute limitations.
+    assert socks is not None
+    socks_mod: Any = socks
+
+    proxy_type = socks_mod.SOCKS5
+    socks_mod.set_default_proxy(
         proxy_type,
         proxy_info.host,
         proxy_info.port,
@@ -210,7 +218,7 @@ def _use_socks_proxy(proxy_info: ProxyInfo) -> Iterator[None]:
         proxy_info.password,
     )
     original_socket = socket.socket
-    setattr(socket, "socket", socks.socksocket)
+    setattr(socket, "socket", socks_mod.socksocket)
     try:
         yield
     finally:
