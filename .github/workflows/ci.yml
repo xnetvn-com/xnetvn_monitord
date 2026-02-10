@@ -53,7 +53,8 @@ jobs:
 
       - name: Mypy
         continue-on-error: true
-        run: python -m mypy src
+        run: |
+          python -m mypy --install-types --non-interactive src
 
       - name: ShellCheck scripts
         run: shellcheck scripts/*.sh
