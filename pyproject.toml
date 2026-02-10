@@ -27,8 +27,7 @@ exclude = """
   | dist
   | htmlcov
   | \\.local
-  | __pycache__
-)/
+  | __pycache__  | debug)/
 """
 
 [tool.isort]
@@ -36,4 +35,4 @@ profile = "black"
 line_length = 120
 known_first_party = ["xnetvn_monitord"]
 src_paths = ["src", "tests"]
-skip = ["htmlcov", ".local", ".venv", "build", "dist"]
+skip = ["htmlcov", ".local", ".venv", "build", "dist", "debug"]
