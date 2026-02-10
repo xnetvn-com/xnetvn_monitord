@@ -605,7 +605,7 @@ class TestServiceMonitorHttpCheck:
         mock_response = MagicMock()
         mock_response.getcode.return_value = 200
         mock_response.__enter__.return_value = mock_response
-        mocker.patch("urllib.request.urlopen", return_value=mock_response)
+        mocker.patch("xnetvn_monitord.monitors.service_monitor.open_url", return_value=mock_response)
         mocker.patch("time.monotonic", side_effect=[0, 0.1])
 
         monitor = ServiceMonitor({"enabled": True})
@@ -627,7 +627,7 @@ class TestServiceMonitorHttpCheck:
         mock_response = MagicMock()
         mock_response.getcode.return_value = 200
         mock_response.__enter__.return_value = mock_response
-        mocker.patch("urllib.request.urlopen", return_value=mock_response)
+        mocker.patch("xnetvn_monitord.monitors.service_monitor.open_url", return_value=mock_response)
         mocker.patch("time.monotonic", side_effect=[0, 2.0])
 
         monitor = ServiceMonitor({"enabled": True})
@@ -653,7 +653,7 @@ class TestServiceMonitorHttpCheck:
             hdrs=None,
             fp=None,
         )
-        mocker.patch("urllib.request.urlopen", side_effect=error)
+        mocker.patch("xnetvn_monitord.monitors.service_monitor.open_url", side_effect=error)
         mocker.patch("time.monotonic", side_effect=[0, 0.2])
 
         monitor = ServiceMonitor({"enabled": True})
@@ -673,7 +673,7 @@ class TestServiceMonitorHttpCheck:
         mock_response = MagicMock()
         mock_response.getcode.return_value = 503
         mock_response.__enter__.return_value = mock_response
-        mocker.patch("urllib.request.urlopen", return_value=mock_response)
+        mocker.patch("xnetvn_monitord.monitors.service_monitor.open_url", return_value=mock_response)
         mocker.patch("time.monotonic", side_effect=[0, 0.1])
 
         monitor = ServiceMonitor({"enabled": True})
@@ -699,7 +699,10 @@ class TestServiceMonitorHttpCheck:
         mock_response = MagicMock()
         mock_response.getcode.return_value = 200
         mock_response.__enter__.return_value = mock_response
-        mocker.patch("urllib.request.urlopen", return_value=mock_response)
+        open_url_mock = mocker.patch(
+            "xnetvn_monitord.monitors.service_monitor.open_url",
+            return_value=mock_response,
+        )
         mocker.patch("time.monotonic", side_effect=[0, 0.05])
 
         monitor = ServiceMonitor({"enabled": True})
@@ -713,11 +716,12 @@ class TestServiceMonitorHttpCheck:
         result = monitor._check_http(service_config)
 
         assert result["running"] is True
+        assert open_url_mock.call_args[0][2] is mock_context
 
     def test_should_fail_on_connection_error(self, mocker):
         """Test HTTP check returns failure on connection errors."""
         mocker.patch(
-            "urllib.request.urlopen",
+            "xnetvn_monitord.monitors.service_monitor.open_url",
             side_effect=urllib.error.URLError("connection failed"),
         )
         mocker.patch("time.monotonic", side_effect=[0, 0.3])
@@ -733,6 +737,30 @@ class TestServiceMonitorHttpCheck:
 
         assert result["running"] is False
         assert "Connection error" in result["message"]
+
+    def test_should_use_service_proxy_override(self, mocker):
+        """Test HTTP check uses per-service proxy override when provided."""
+        mock_response = MagicMock()
+        mock_response.getcode.return_value = 200
+        mock_response.__enter__.return_value = mock_response
+        open_url_mock = mocker.patch(
+            "xnetvn_monitord.monitors.service_monitor.open_url",
+            return_value=mock_response,
+        )
+        mocker.patch("time.monotonic", side_effect=[0, 0.1])
+
+        monitor = ServiceMonitor({"enabled": True, "proxy": {"enabled": False}})
+        service_config = {
+            "name": "web",
+            "check_method": "https",
+            "url": "https://example.com/health",
+            "proxy": {"enabled": True, "uri": "http://127.0.0.1:8080"},
+        }
+
+        result = monitor._check_http(service_config)
+
+        assert result["running"] is True
+        assert open_url_mock.call_args[0][3] == service_config["proxy"]
 
 
 class TestServiceMonitorCheckAllServices:

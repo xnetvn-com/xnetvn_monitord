@@ -37,6 +37,7 @@ the example file if it does not exist and sets permissions to 0600.
 | DISCORD_WEBHOOK_URL | Discord webhook | Optional | When Discord notifications are enabled |
 | WEBHOOK_URL | Generic webhook | Optional | When Webhook notifications are enabled |
 | GITHUB_TOKEN | GitHub API token | Optional | Used by update_checker |
+| PROXY_URI | Outbound proxy URI | Optional | Used by per-service proxy blocks |
 | XNETVN_SERVICE_MANAGER | Service manager override | No | systemd, openrc, sysv |
 
 ## 3. How to Set Environment Variables
@@ -66,6 +67,7 @@ SLACK_WEBHOOK_URL=your_slack_webhook_url
 DISCORD_WEBHOOK_URL=your_discord_webhook_url
 WEBHOOK_URL=your_webhook_url
 GITHUB_TOKEN=your_github_token
+PROXY_URI=http://user:pass@127.0.0.1:8080
 EOF
 sudo chmod 600 /etc/xnetvn_monitord/xnetvn_monitord.env
 ```

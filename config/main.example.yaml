@@ -75,6 +75,16 @@ update_checker:
   # Enable or disable automatic update checks
   enabled: true
 
+  # Proxy configuration for update checks
+  proxy:
+    # Enable or disable proxy routing for network requests
+    enabled: false
+    # Proxy URI (HTTP/HTTPS/SOCKS5). Example:
+    #   http://user:pass@127.0.0.1:8080
+    #   https://proxy.example.com:8443
+    #   socks5://user:pass@127.0.0.1:1080
+    uri: "${PROXY_URI}"
+
   # Check interval configuration
   # Supported units: hours, days, weeks
   interval:
@@ -108,6 +118,17 @@ update_checker:
 service_monitor:
   # Enable or disable service monitoring
   enabled: true
+
+  # Default proxy configuration for HTTP/HTTPS checks
+  # Individual services can override this with service-level proxy settings.
+  proxy:
+    # Enable or disable proxy routing for network requests
+    enabled: false
+    # Proxy URI (HTTP/HTTPS/SOCKS5). Example:
+    #   http://user:pass@127.0.0.1:8080
+    #   https://proxy.example.com:8443
+    #   socks5://user:pass@127.0.0.1:1080
+    uri: "${PROXY_URI}"
 
   # Action on failure: restart, restart_and_notify
   action_on_failure: "restart_and_notify"
@@ -426,6 +447,10 @@ service_monitor:
     - name: "web_homepage"
       enabled: false
       check_method: "https"
+      # Optional per-service proxy override for HTTP/HTTPS checks
+      # proxy:
+      #   enabled: true
+      #   uri: "${PROXY_URI}"
       # Target URL for health check
       url: "https://example.com/health"
       # HTTP method: GET, HEAD, POST, ...
@@ -719,6 +744,15 @@ notifications:
     enabled: false
     # Bot token (BotFather)
     bot_token: "${TELEGRAM_BOT_TOKEN}"
+    # Proxy configuration for Telegram API calls
+    proxy:
+      # Enable or disable proxy routing for network requests
+      enabled: false
+      # Proxy URI (HTTP/HTTPS/SOCKS5). Example:
+      #   http://user:pass@127.0.0.1:8080
+      #   https://proxy.example.com:8443
+      #   socks5://user:pass@127.0.0.1:1080
+      uri: "${PROXY_URI}"
     # List of chat IDs to receive alerts
     chat_ids:
       # - "-100XXXX"  # Example group chat ID
@@ -750,6 +784,15 @@ notifications:
     enabled: false
     # Incoming webhook URL
     webhook_url: "${SLACK_WEBHOOK_URL}"
+    # Proxy configuration for Slack webhook calls
+    proxy:
+      # Enable or disable proxy routing for network requests
+      enabled: false
+      # Proxy URI (HTTP/HTTPS/SOCKS5). Example:
+      #   http://user:pass@127.0.0.1:8080
+      #   https://proxy.example.com:8443
+      #   socks5://user:pass@127.0.0.1:1080
+      uri: "${PROXY_URI}"
     # Default channel for messages
     channel: "#server-alerts"
     # Bot display name
@@ -777,6 +820,15 @@ notifications:
     enabled: false
     # Discord webhook URL
     webhook_url: "${DISCORD_WEBHOOK_URL}"
+    # Proxy configuration for Discord webhook calls
+    proxy:
+      # Enable or disable proxy routing for network requests
+      enabled: false
+      # Proxy URI (HTTP/HTTPS/SOCKS5). Example:
+      #   http://user:pass@127.0.0.1:8080
+      #   https://proxy.example.com:8443
+      #   socks5://user:pass@127.0.0.1:1080
+      uri: "${PROXY_URI}"
     # Bot display name
     username: "xNetVN Monitor"
     # Optional avatar URL
@@ -801,6 +853,15 @@ notifications:
     enabled: false
     # Single webhook URL (use urls for multiple endpoints)
     # url: "${WEBHOOK_URL}"
+    # Proxy configuration for webhook calls
+    proxy:
+      # Enable or disable proxy routing for network requests
+      enabled: false
+      # Proxy URI (HTTP/HTTPS/SOCKS5). Example:
+      #   http://user:pass@127.0.0.1:8080
+      #   https://proxy.example.com:8443
+      #   socks5://user:pass@127.0.0.1:1080
+      uri: "${PROXY_URI}"
     # List of webhook URLs
     urls:
       - "${WEBHOOK_URL_1}"

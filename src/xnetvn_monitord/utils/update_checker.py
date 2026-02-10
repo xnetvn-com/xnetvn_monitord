@@ -29,7 +29,14 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from urllib import error, request
 
-from .network import force_ipv4, is_http_url
+from .network import (
+    ProxyConfigurationError,
+    download_url_to_file,
+    is_http_url,
+    mask_proxy_uri,
+    open_url,
+    resolve_proxy_uri,
+)
 from .service_manager import ServiceManager
 
 logger = logging.getLogger(__name__)
@@ -170,6 +177,7 @@ class UpdateChecker:
         self._interval_seconds = self._get_interval_seconds()
         self._state_cache: Optional[Dict[str, float]] = None
         self.only_ipv4 = config.get("only_ipv4", False)
+        self.proxy_config = config.get("proxy")
 
     def _get_interval_seconds(self) -> int:
         """Return interval in seconds based on configuration."""
@@ -239,15 +247,21 @@ class UpdateChecker:
             headers["Authorization"] = f"Bearer {token}"
 
         req = request.Request(url, headers=headers)
+        proxy_uri = resolve_proxy_uri(self.proxy_config)
         try:
-            with force_ipv4(self.only_ipv4):
-                with request.urlopen(req, timeout=15) as response:  # nosec B310
-                    data = json.loads(response.read().decode("utf-8"))
+            with open_url(req, 15, None, self.proxy_config, self.only_ipv4) as response:  # nosec B310
+                data = json.loads(response.read().decode("utf-8"))
         except error.HTTPError as exc:
             logger.error("GitHub release check failed: %s", exc)
             return None
         except error.URLError as exc:
             logger.error("GitHub release check failed: %s", exc)
+            return None
+        except ProxyConfigurationError as exc:
+            if proxy_uri:
+                logger.error("Proxy configuration error (%s): %s", mask_proxy_uri(proxy_uri), exc)
+            else:
+                logger.error("Proxy configuration error: %s", exc)
             return None
         except Exception as exc:
             logger.error("Failed to parse GitHub response: %s", exc)
@@ -358,8 +372,13 @@ class UpdateChecker:
         try:
             with tempfile.TemporaryDirectory() as temp_dir:
                 tarball_path = Path(temp_dir) / "release.tar.gz"
-                with force_ipv4(self.only_ipv4):
-                    request.urlretrieve(tarball_url, tarball_path)  # nosec B310
+                download_url_to_file(
+                    tarball_url,
+                    str(tarball_path),
+                    timeout=60,
+                    proxy_config=self.proxy_config,
+                    only_ipv4=self.only_ipv4,
+                )
 
                 with tarfile.open(tarball_path, "r:gz") as tar_handle:
                     self._safe_extract(tar_handle, Path(temp_dir))
@@ -400,6 +419,13 @@ class UpdateChecker:
                         logger.warning("Release missing .env.example")
                 else:
                     logger.warning("Release missing config directory")
+        except ProxyConfigurationError as exc:
+            proxy_uri = resolve_proxy_uri(self.proxy_config)
+            if proxy_uri:
+                logger.error("Proxy configuration error (%s): %s", mask_proxy_uri(proxy_uri), exc)
+            else:
+                logger.error("Proxy configuration error: %s", exc)
+            return False
         except Exception as exc:
             logger.error("Failed to apply update: %s", exc)
             return False

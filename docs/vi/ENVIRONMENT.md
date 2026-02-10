@@ -37,6 +37,7 @@ file mẫu nếu chưa tồn tại và đặt quyền 0600.
 | DISCORD_WEBHOOK_URL | Webhook Discord | Tùy cấu hình | Khi bật Discord notification |
 | WEBHOOK_URL | Webhook chung | Tùy cấu hình | Khi bật Webhook notification |
 | GITHUB_TOKEN | GitHub API token | Tùy cấu hình | Dùng cho update_checker |
+| PROXY_URI | Proxy outbound | Tùy cấu hình | Dùng cho proxy theo từng dịch vụ |
 | XNETVN_SERVICE_MANAGER | Override service manager | Không | systemd, openrc, sysv |
 
 ## 3. Cách thiết lập biến môi trường
@@ -66,6 +67,7 @@ SLACK_WEBHOOK_URL=your_slack_webhook_url
 DISCORD_WEBHOOK_URL=your_discord_webhook_url
 WEBHOOK_URL=your_webhook_url
 GITHUB_TOKEN=your_github_token
+PROXY_URI=http://user:pass@127.0.0.1:8080
 EOF
 sudo chmod 600 /etc/xnetvn_monitord/xnetvn_monitord.env
 ```

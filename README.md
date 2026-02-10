@@ -24,6 +24,7 @@
 - 📧 **Multi-channel Notifications**: Email, Telegram, Slack, Discord, Webhook
 - 🧭 **Hostname in Alerts**: Prefix notifications with the server hostname
 - 🌐 **IPv4-only Option**: Force outbound HTTP checks and notifications to IPv4
+- 🧰 **Proxy Support**: Per-service proxy for outbound HTTP/HTTPS/SOCKS5 traffic
 - 🧵 **Telegram Topics**: Send to topics using chat IDs like `-100XXXX_YYY`
 - ⬆️ **Manual Update Script**: `scripts/update.sh` with backups and confirmation
 - 🔒 **Security First**: Sensitive data filtering, rate limiting, audit logging
@@ -147,6 +148,7 @@ SLACK_WEBHOOK_URL=your_slack_webhook_url
 DISCORD_WEBHOOK_URL=your_discord_webhook_url
 WEBHOOK_URL_1=your_webhook_url
 GITHUB_TOKEN=your_github_token
+PROXY_URI=http://user:pass@127.0.0.1:8080
 ```
 
 After updating the file:

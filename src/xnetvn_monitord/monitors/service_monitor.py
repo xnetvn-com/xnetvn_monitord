@@ -29,7 +29,13 @@ import urllib.error
 import urllib.request
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
-from xnetvn_monitord.utils.network import force_ipv4, is_http_url
+from xnetvn_monitord.utils.network import (
+    ProxyConfigurationError,
+    is_http_url,
+    mask_proxy_uri,
+    open_url,
+    resolve_proxy_uri,
+)
 from xnetvn_monitord.utils.service_manager import ServiceManager
 
 if TYPE_CHECKING:
@@ -63,6 +69,7 @@ class ServiceMonitor:
         self.enabled = config.get("enabled", True)
         self.service_manager = service_manager or ServiceManager()
         self.only_ipv4 = config.get("only_ipv4", False)
+        self.proxy_config = config.get("proxy")
 
     def check_all_services(self) -> List[Dict]:
         """Check all configured services.
@@ -596,37 +603,40 @@ class ServiceMonitor:
 
         start_time = time.monotonic()
         try:
-            with force_ipv4(self.only_ipv4):
-                with urllib.request.urlopen(  # nosec B310
-                    request,
-                    timeout=timeout_seconds,
-                    context=context,
-                ) as response:
-                    status_code = response.getcode()
-                    elapsed_ms = (time.monotonic() - start_time) * 1000
+            proxy_config = service_config.get("proxy", self.proxy_config)
+            proxy_uri = resolve_proxy_uri(proxy_config)
+            with open_url(
+                request,
+                timeout_seconds,
+                context,
+                proxy_config,
+                self.only_ipv4,
+            ) as response:  # nosec B310
+                status_code = response.getcode()
+                elapsed_ms = (time.monotonic() - start_time) * 1000
 
-                    if max_response_time_ms and elapsed_ms > max_response_time_ms:
-                        return {
-                            "running": False,
-                            "message": f"Slow response: {elapsed_ms:.0f}ms",
-                            "status_code": status_code,
-                            "response_time_ms": elapsed_ms,
-                        }
-
-                    if status_code not in expected_codes:
-                        return {
-                            "running": False,
-                            "message": f"Unexpected HTTP status: {status_code}",
-                            "status_code": status_code,
-                            "response_time_ms": elapsed_ms,
-                        }
-
+                if max_response_time_ms and elapsed_ms > max_response_time_ms:
                     return {
-                        "running": True,
-                        "message": f"HTTP {status_code} ({elapsed_ms:.0f}ms)",
+                        "running": False,
+                        "message": f"Slow response: {elapsed_ms:.0f}ms",
                         "status_code": status_code,
                         "response_time_ms": elapsed_ms,
                     }
+
+                if status_code not in expected_codes:
+                    return {
+                        "running": False,
+                        "message": f"Unexpected HTTP status: {status_code}",
+                        "status_code": status_code,
+                        "response_time_ms": elapsed_ms,
+                    }
+
+                return {
+                    "running": True,
+                    "message": f"HTTP {status_code} ({elapsed_ms:.0f}ms)",
+                    "status_code": status_code,
+                    "response_time_ms": elapsed_ms,
+                }
         except urllib.error.HTTPError as e:
             elapsed_ms = (time.monotonic() - start_time) * 1000
             return {
@@ -641,6 +651,15 @@ class ServiceMonitor:
                 "running": False,
                 "message": f"Connection error: {str(e)}",
                 "response_time_ms": elapsed_ms,
+            }
+        except ProxyConfigurationError as e:
+            proxy_config = service_config.get("proxy", self.proxy_config)
+            proxy_uri = resolve_proxy_uri(proxy_config)
+            proxy_label = mask_proxy_uri(proxy_uri) if proxy_uri else "unknown"
+            return {
+                "running": False,
+                "message": f"Proxy configuration error ({proxy_label}): {str(e)}",
+                "response_time_ms": (time.monotonic() - start_time) * 1000,
             }
 
     def _handle_service_failure(self, service_config: Dict, status: Dict) -> Optional[Dict]:
