@@ -18,16 +18,18 @@ target-version = ["py38", "py39", "py310", "py311"]
 include = "\\.pyi?$"
 exclude = """
 /(
-    \\.eggs
-  | \\.git
-  | \\.mypy_cache
-  | \\.tox
-  | \\.venv
+    \.eggs
+  | \.git
+  | \.mypy_cache
+  | \.tox
+  | \.venv
   | build
   | dist
   | htmlcov
-  | \\.local
-  | __pycache__  | debug)/
+  | \.local
+  | __pycache__
+  | debug
+)/
 """
 
 [tool.isort]
