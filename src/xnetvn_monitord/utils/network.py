@@ -23,7 +23,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 from urllib.parse import unquote, urlparse
-from urllib.request import HTTPSHandler, ProxyHandler, Request, build_opener, urlopen, OpenerDirector
+from urllib.request import HTTPSHandler, OpenerDirector, ProxyHandler, Request, build_opener, urlopen
 
 try:
     import socks
