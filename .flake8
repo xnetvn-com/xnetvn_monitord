@@ -23,4 +23,5 @@ exclude =
     build,
     dist,
     htmlcov,
-    .local
+    .local,
+    debug
