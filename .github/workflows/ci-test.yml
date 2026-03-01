@@ -52,7 +52,7 @@ jobs:
 
       - name: Upload coverage artifacts
         if: always() && steps.coverage_check.outputs.found == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-artifacts
           path: |
