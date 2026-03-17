@@ -36,7 +36,22 @@
 
 ## 📋 Quick Start
 
-### Installation
+### Recommended (for non-technical users)
+
+Run the installer directly from GitHub in a single command (no file saved locally).
+This is the easiest way to get started without cloning the repo.
+
+```bash
+# Download and execute installer in one step (preferred)
+# (uses the latest release by default)
+# curl:
+curl -fsSL https://raw.githubusercontent.com/xnetvn-com/xnetvn_monitord/refs/heads/main/scripts/install.sh | sudo bash -s -- --releases=latest
+
+# wget:
+wget -qO- https://raw.githubusercontent.com/xnetvn-com/xnetvn_monitord/refs/heads/main/scripts/install.sh | sudo bash -s -- --releases=latest
+```
+
+### Installation (from source)
 
 By default, `scripts/install.sh` installs from the current local repository
 directory. Use `--releases=latest` to install from the latest published GitHub
