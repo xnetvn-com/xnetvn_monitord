@@ -7,6 +7,14 @@ This format follows Keep a Changelog and uses Semantic Versioning.
 ## [Unreleased]
 
 
+## [1.2.1] - 2026-03-17
+
+### Added
+
+- Installer: add `--releases=latest` and `--releases=vX.Y.Z` options for installing from GitHub release tags.
+- Update documentation and release prompts to reference the current version.
+
+
 ## [1.2.0] - 2026-02-09
 
 ### Added
