@@ -5,6 +5,7 @@ After=network.target
 
 [Service]
 Type=simple
+NotifyAccess=main
 User=root
 Group=root
 EnvironmentFile=-/etc/xnetvn_monitord/xnetvn_monitord.env

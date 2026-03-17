@@ -149,8 +149,9 @@ The daemon loads an optional `.env` file from:
 Use `/opt/xnetvn_monitord/config/.env.example` as a template and copy it to
 `.env` without committing secrets.
 
-The installer and auto-updater refresh `/opt/xnetvn_monitord/config/main.example.yaml`
-and `/opt/xnetvn_monitord/config/.env.example` on each install/upgrade, without
+The installer and auto-updater refresh `/opt/xnetvn_monitord/scripts/update.sh`,
+`/opt/xnetvn_monitord/config/main.example.yaml`, and
+`/opt/xnetvn_monitord/config/.env.example` on each install/upgrade, without
 overwriting `/opt/xnetvn_monitord/config/main.yaml` or `/opt/xnetvn_monitord/config/.env`.
 On first install, the script also creates `/opt/xnetvn_monitord/config/.env`
 with permissions set to 0600 if it does not exist.
@@ -224,6 +225,9 @@ notifications:
   webhook:
     enabled: false
 ```
+
+`update_checker` compares releases against the running package version, not any
+version string stored in YAML configuration.
 
 ---
 

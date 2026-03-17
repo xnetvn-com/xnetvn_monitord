@@ -15,6 +15,7 @@
 """Unit tests for SlackNotifier."""
 
 import ssl
+import logging
 from urllib.error import URLError
 
 from xnetvn_monitord.notifiers.slack_notifier import SlackNotifier
@@ -110,6 +111,25 @@ class TestSlackNotifier:
         notifier = SlackNotifier({"enabled": True, "webhook_url": "https://example.com"})
 
         assert notifier.send_notification("test") is False
+
+    def test_should_log_sanitized_target_on_url_error(self, mocker, caplog):
+        """Test Slack errors log redacted endpoint context."""
+        caplog.set_level(logging.ERROR)
+        mocker.patch(
+            "xnetvn_monitord.notifiers.slack_notifier.open_url",
+            side_effect=URLError("down"),
+        )
+
+        notifier = SlackNotifier(
+            {
+                "enabled": True,
+                "webhook_url": "https://hooks.slack.com/services/T000/B000/secret-token",
+            }
+        )
+
+        assert notifier.send_notification("test") is False
+        assert "https://hooks.slack.com" in caplog.text
+        assert "secret-token" not in caplog.text
 
     def test_should_skip_live_test_when_disabled(self):
         """Test connection check skips live test when disabled."""

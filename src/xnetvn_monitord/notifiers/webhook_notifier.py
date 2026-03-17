@@ -29,6 +29,8 @@ from xnetvn_monitord.utils.network import (
     is_http_url,
     mask_proxy_uri,
     open_url,
+    read_response_preview,
+    redact_url_for_logs,
     resolve_proxy_uri,
 )
 
@@ -129,8 +131,9 @@ class WebhookNotifier:
             True if request succeeded, False otherwise.
         """
         try:
+            target_label = redact_url_for_logs(url)
             if not is_http_url(url):
-                logger.error("Webhook URL has invalid scheme: %s", url)
+                logger.error("Webhook URL has invalid scheme: %s", target_label)
                 return False
 
             data = json.dumps(payload).encode("utf-8")
@@ -152,22 +155,46 @@ class WebhookNotifier:
             ) as response:  # nosec B310
                 status_code = getattr(response, "status", response.getcode())
                 if 200 <= status_code < 300:
-                    logger.debug("Webhook POST succeeded: %s", url)
+                    logger.debug("Webhook POST succeeded: %s", target_label)
                     return True
 
-                logger.error("Webhook POST failed (%s): %s", status_code, url)
+                logger.error(
+                    "Webhook request failed target=%s status=%s response=%s",
+                    target_label,
+                    status_code,
+                    read_response_preview(response) or "<empty>",
+                )
                 return False
 
+        except urllib.error.HTTPError as exc:
+            logger.error(
+                "Webhook request failed target=%s status=%s response=%s",
+                redact_url_for_logs(url),
+                exc.code,
+                read_response_preview(exc) or str(exc),
+            )
+            return False
+
         except urllib.error.URLError as exc:
-            logger.error("Webhook URL error for %s: %s", url, exc)
+            logger.error("Webhook request error target=%s: %s", redact_url_for_logs(url), exc)
             return False
         except ProxyConfigurationError as exc:
             proxy_uri = resolve_proxy_uri(self.proxy_config)
             proxy_label = mask_proxy_uri(proxy_uri) if proxy_uri else "unknown"
-            logger.error("Webhook proxy configuration error (%s): %s", proxy_label, exc)
+            logger.error(
+                "Webhook proxy configuration error target=%s proxy=%s: %s",
+                redact_url_for_logs(url),
+                proxy_label,
+                exc,
+            )
             return False
         except Exception as exc:
-            logger.error("Webhook POST error for %s: %s", url, exc, exc_info=True)
+            logger.error(
+                "Webhook request error target=%s: %s",
+                redact_url_for_logs(url),
+                exc,
+                exc_info=True,
+            )
             return False
 
     @staticmethod

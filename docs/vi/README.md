@@ -88,6 +88,9 @@ Cập nhật thủ công:
 - sudo bash /opt/xnetvn_monitord/scripts/update.sh
 - Hoặc chạy từ repo: sudo bash scripts/update.sh
 
+Update checker trong daemon dùng version thực tế của package đang chạy làm
+nguồn chuẩn khi quyết định có update hay không.
+
 ## Cấu hình
 
 - Tệp cấu hình mặc định: config/main.yaml (tham khảo config/main.example.yaml).
@@ -96,7 +99,9 @@ Cập nhật thủ công:
 Các khối cấu hình chính:
 
 - general: thông tin ứng dụng, logging, PID.
-- update_checker: kiểm tra cập nhật và tùy chọn auto update.
+- update_checker: kiểm tra cập nhật và tùy chọn auto update. Thành phần này
+	dùng version thực tế của package đang chạy và khi auto update sẽ làm mới
+	update script cùng các file ví dụ đã cài.
 - service_monitor: dịch vụ, tần suất, phương thức kiểm tra, hành động khôi phục.
 - resource_monitor: ngưỡng CPU/RAM/Disk, recovery command, restart services.
 - notifications: Email/Telegram/Slack/Discord/Webhook, rate limit, content
@@ -106,11 +111,11 @@ Ví dụ restart_command dạng danh sách:
 
 ```yaml
 service_monitor:
-	services:
-		- name: "nginx"
-			restart_command:
-				- "systemctl restart nginx"
-				- "bash /opt/xnetvn_monitord/scripts/custom-restart.sh"
+  services:
+    - name: "nginx"
+      restart_command:
+        - "systemctl restart nginx"
+        - "bash /opt/xnetvn_monitord/scripts/custom-restart.sh"
 ```
 
 ## Biến môi trường (.env + systemd)
@@ -122,8 +127,9 @@ Daemon sẽ nạp tệp .env tại:
 ```
 
 Dùng /opt/xnetvn_monitord/config/.env.example làm mẫu và copy sang .env (không
-commit secrets). Script cài đặt sẽ tạo .env ở lần cài đặt đầu (quyền 0600) và
-làm mới main.example.yaml và .env.example mà không ghi đè main.yaml hoặc .env.
+commit secrets). Script cài đặt và auto-updater sẽ làm mới
+`/opt/xnetvn_monitord/scripts/update.sh`, `main.example.yaml`, và `.env.example`
+mà không ghi đè main.yaml hoặc .env. Ở lần cài đặt đầu, script cũng tạo .env với quyền 0600.
 
 Khai báo biến môi trường qua systemd EnvironmentFile:
 

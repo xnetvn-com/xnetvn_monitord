@@ -27,9 +27,6 @@ general:
   # Application name (used in logs and notifications)
   app_name: "xnetvn_monitord"
 
-  # Application version (informational)
-  app_version: "1.0.0"
-
   # Monitoring loop interval in seconds
   # This is the global loop frequency, not the per-service check interval
   check_interval: 60

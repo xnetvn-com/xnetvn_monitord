@@ -34,6 +34,8 @@ from xnetvn_monitord.utils.network import (
     is_http_url,
     mask_proxy_uri,
     open_url,
+    read_response_preview,
+    redact_url_for_logs,
     resolve_proxy_uri,
 )
 from xnetvn_monitord.utils.service_manager import ServiceManager
@@ -593,6 +595,7 @@ class ServiceMonitor:
         http_method = service_config.get("http_method", "GET").upper()
         headers = service_config.get("headers", {})
         verify_tls = service_config.get("verify_tls", True)
+        target_label = redact_url_for_logs(url, include_path=True)
 
         request = urllib.request.Request(url, method=http_method, headers=headers)
         context = None
@@ -615,6 +618,18 @@ class ServiceMonitor:
                 elapsed_ms = (time.monotonic() - start_time) * 1000
 
                 if max_response_time_ms and elapsed_ms > max_response_time_ms:
+                    logger.error(
+                        (
+                            "HTTP check failed service=%s method=%s target=%s "
+                            "reason=slow_response status=%s elapsed_ms=%.0f threshold_ms=%s"
+                        ),
+                        service_config.get("name", "unknown"),
+                        http_method,
+                        target_label,
+                        status_code,
+                        elapsed_ms,
+                        max_response_time_ms,
+                    )
                     return {
                         "running": False,
                         "message": f"Slow response: {elapsed_ms:.0f}ms",
@@ -623,6 +638,19 @@ class ServiceMonitor:
                     }
 
                 if status_code not in expected_codes:
+                    logger.error(
+                        (
+                            "HTTP check failed service=%s method=%s target=%s reason=unexpected_status "
+                            "status=%s expected=%s elapsed_ms=%.0f response=%s"
+                        ),
+                        service_config.get("name", "unknown"),
+                        http_method,
+                        target_label,
+                        status_code,
+                        expected_codes,
+                        elapsed_ms,
+                        read_response_preview(response) or "<empty>",
+                    )
                     return {
                         "running": False,
                         "message": f"Unexpected HTTP status: {status_code}",
@@ -638,6 +666,18 @@ class ServiceMonitor:
                 }
         except urllib.error.HTTPError as e:
             elapsed_ms = (time.monotonic() - start_time) * 1000
+            logger.error(
+                (
+                    "HTTP check failed service=%s method=%s target=%s "
+                    "reason=http_error status=%s elapsed_ms=%.0f response=%s"
+                ),
+                service_config.get("name", "unknown"),
+                http_method,
+                target_label,
+                e.code,
+                elapsed_ms,
+                read_response_preview(e) or str(e),
+            )
             return {
                 "running": False,
                 "message": f"HTTP error: {e.code}",
@@ -646,6 +686,14 @@ class ServiceMonitor:
             }
         except (urllib.error.URLError, socket.timeout) as e:
             elapsed_ms = (time.monotonic() - start_time) * 1000
+            logger.error(
+                "HTTP check failed service=%s method=%s target=%s reason=connection_error elapsed_ms=%.0f error=%s",
+                service_config.get("name", "unknown"),
+                http_method,
+                target_label,
+                elapsed_ms,
+                str(e),
+            )
             return {
                 "running": False,
                 "message": f"Connection error: {str(e)}",
@@ -655,6 +703,14 @@ class ServiceMonitor:
             proxy_config = service_config.get("proxy", self.proxy_config)
             proxy_uri = resolve_proxy_uri(proxy_config)
             proxy_label = mask_proxy_uri(proxy_uri) if proxy_uri else "unknown"
+            logger.error(
+                "HTTP check failed service=%s method=%s target=%s reason=proxy_error proxy=%s error=%s",
+                service_config.get("name", "unknown"),
+                http_method,
+                target_label,
+                proxy_label,
+                str(e),
+            )
             return {
                 "running": False,
                 "message": f"Proxy configuration error ({proxy_label}): {str(e)}",

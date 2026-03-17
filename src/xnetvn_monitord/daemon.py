@@ -27,9 +27,11 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from . import __version__ as package_version
 from .monitors import ResourceMonitor, ServiceMonitor
 from .notifiers import NotificationManager
 from .utils import ConfigLoader, UpdateChecker, load_env_file
+from .utils.systemd_notify import SystemdNotifier
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +55,7 @@ class MonitorDaemon:
         self.service_monitor: Optional[ServiceMonitor] = None
         self.resource_monitor: Optional[ResourceMonitor] = None
         self.notification_manager: Optional[NotificationManager] = None
+        self.systemd_notifier = SystemdNotifier()
 
         # Setup signal handlers
         signal.signal(signal.SIGTERM, self._signal_handler)
@@ -63,13 +66,14 @@ class MonitorDaemon:
         """Initialize the daemon components."""
         # Load configuration
         self.config = self.config_loader.load()
+        runtime_version = self._get_runtime_version()
 
         # Setup logging
         self._setup_logging()
 
         logger.info("=" * 80)
         logger.info("xNetVN Monitor Daemon starting...")
-        logger.info(f"Version: {self.config['general']['app_version']}")
+        logger.info(f"Version: {runtime_version}")
         logger.info(f"Config file: {self.config_path}")
         logger.info("=" * 80)
 
@@ -112,7 +116,20 @@ class MonitorDaemon:
         pid_file = self.config["general"].get("pid_file", "/var/run/xnetvn_monitord.pid")
         self._create_pid_file(pid_file)
 
+        self.systemd_notifier.send_ready(self._build_runtime_status("ready"))
         logger.info("Daemon initialization completed")
+
+    def _get_runtime_version(self) -> str:
+        """Return the running package version used for update decisions."""
+        return package_version
+
+    def _build_runtime_status(self, state: str, cycle_duration: Optional[float] = None) -> str:
+        """Build a concise runtime status line for systemd."""
+        app_name = self.config.get("general", {}).get("app_name", "xnetvn_monitord")
+        parts = [f"{app_name} v{self._get_runtime_version()}", state, f"host={self.hostname}"]
+        if cycle_duration is not None:
+            parts.append(f"cycle={cycle_duration:.2f}s")
+        return " | ".join(parts)
 
     def _setup_logging(self) -> None:
         """Setup logging configuration."""
@@ -184,6 +201,7 @@ class MonitorDaemon:
         check_interval = self.config["general"].get("check_interval", 60)
 
         logger.info(f"Monitoring loop started (check interval: {check_interval}s)")
+        self.systemd_notifier.send_status(self._build_runtime_status("running"))
 
         try:
             while self.running:
@@ -207,6 +225,7 @@ class MonitorDaemon:
 
                 # Calculate sleep time
                 cycle_duration = time.time() - cycle_start
+                self.systemd_notifier.send_status(self._build_runtime_status("running", cycle_duration))
                 sleep_time = max(0, check_interval - cycle_duration)
 
                 if sleep_time > 0:
@@ -416,7 +435,7 @@ class MonitorDaemon:
             logger.info("Update checker is disabled")
             return
 
-        current_version = self.config.get("general", {}).get("app_version", "0.0.0")
+        current_version = self._get_runtime_version()
         work_dir = Path(self.config.get("general", {}).get("work_dir", "/opt/xnetvn_monitord"))
         checker = UpdateChecker(update_config, current_version, work_dir)
         result = checker.check_for_updates()
@@ -456,6 +475,7 @@ class MonitorDaemon:
     def shutdown(self) -> None:
         """Shutdown the daemon gracefully."""
         logger.info("Shutting down daemon...")
+        self.systemd_notifier.send_stopping(self._build_runtime_status("stopping"))
         self.running = False
         self._remove_pid_file()
         logger.info("Daemon shutdown completed")

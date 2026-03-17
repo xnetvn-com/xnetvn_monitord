@@ -19,7 +19,9 @@ import sys
 
 import pytest
 
+from xnetvn_monitord import __version__ as package_version
 from xnetvn_monitord.daemon import MonitorDaemon, main
+from xnetvn_monitord.utils.update_checker import UpdateCheckResult
 
 
 def _build_minimal_config(tmp_path):
@@ -79,6 +81,25 @@ class TestMonitorDaemonInitialization:
         daemon.initialize()
 
         manager_instance.test_all_channels.assert_called_once()
+
+    def test_should_publish_runtime_version_to_systemd_status(self, mocker, tmp_path):
+        """Test daemon publishes a runtime version status string for systemd."""
+        config = _build_minimal_config(tmp_path)
+
+        mocker.patch("xnetvn_monitord.daemon.ConfigLoader.load", return_value=config)
+        mocker.patch("xnetvn_monitord.daemon.ServiceMonitor")
+        mocker.patch("xnetvn_monitord.daemon.ResourceMonitor")
+        manager_mock = mocker.patch("xnetvn_monitord.daemon.NotificationManager")
+        manager_mock.return_value.get_enabled_channels.return_value = []
+
+        daemon = MonitorDaemon("/tmp/config.yaml")
+        daemon.systemd_notifier = mocker.Mock()
+        mocker.patch.object(daemon, "_create_pid_file")
+
+        daemon.initialize()
+
+        daemon.systemd_notifier.send_ready.assert_called_once()
+        assert package_version in daemon.systemd_notifier.send_ready.call_args[0][0]
 
 
 class TestMonitorDaemonLogging:
@@ -397,6 +418,39 @@ class TestMonitorDaemonReload:
         daemon._reload_config(None, None)
 
         error_mock.assert_called()
+
+
+class TestMonitorDaemonUpdateChecks:
+    """Tests for update checker orchestration."""
+
+    def test_should_use_runtime_package_version_for_update_checks(self, mocker, tmp_path):
+        """Use the running package version instead of config.general.app_version."""
+        config = _build_minimal_config(tmp_path)
+        config["general"]["app_version"] = "0.0.0"
+        config["general"]["work_dir"] = str(tmp_path)
+        config["update_checker"] = {
+            "enabled": True,
+            "notify_on_update": False,
+            "auto_update": False,
+        }
+
+        daemon = MonitorDaemon("/tmp/config.yaml")
+        daemon.config = config
+
+        checker_mock = mocker.patch("xnetvn_monitord.daemon.UpdateChecker")
+        checker_mock.return_value.check_for_updates.return_value = UpdateCheckResult(
+            checked=False,
+            update_available=False,
+            current_version=package_version,
+            latest_version=None,
+            release_url=None,
+            tarball_url=None,
+            message="Update interval has not elapsed",
+        )
+
+        daemon._maybe_check_for_updates()
+
+        assert checker_mock.call_args[0][1] == package_version
 
 
 class TestMonitorDaemonShutdown:

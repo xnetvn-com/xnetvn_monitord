@@ -14,6 +14,7 @@
 
 """Unit tests for WebhookNotifier."""
 
+import logging
 from urllib.error import URLError
 
 from xnetvn_monitord.notifiers.webhook_notifier import WebhookNotifier
@@ -109,6 +110,20 @@ class TestWebhookNotifier:
         notifier = WebhookNotifier({"enabled": True, "urls": ["https://example.com"]})
 
         assert notifier._post_payload("https://example.com", {"event": "test"}, {}) is False
+
+    def test_should_log_sanitized_target_on_url_error(self, mocker, caplog):
+        """Test webhook errors log redacted endpoint context."""
+        caplog.set_level(logging.ERROR)
+        mocker.patch(
+            "xnetvn_monitord.notifiers.webhook_notifier.open_url",
+            side_effect=URLError("down"),
+        )
+
+        notifier = WebhookNotifier({"enabled": True, "urls": ["https://hooks.example.com/path/secret-token"]})
+
+        assert notifier._post_payload("https://hooks.example.com/path/secret-token", {"event": "test"}, {}) is False
+        assert "https://hooks.example.com" in caplog.text
+        assert "secret-token" not in caplog.text
 
     def test_should_skip_live_test_when_disabled(self):
         """Test connection check skips live test when disabled."""

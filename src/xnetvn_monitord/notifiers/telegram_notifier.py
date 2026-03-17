@@ -30,6 +30,7 @@ from xnetvn_monitord.utils.network import (
     is_http_url,
     mask_proxy_uri,
     open_url,
+    redact_url_for_logs,
     resolve_proxy_uri,
 )
 
@@ -108,8 +109,9 @@ class TelegramNotifier:
         """
         try:
             url = f"{self.api_base_url}/sendMessage"
+            endpoint_label = redact_url_for_logs(url)
             if not is_http_url(url):
-                logger.error("Telegram API URL has invalid scheme: %s", url)
+                logger.error("Telegram API URL has invalid scheme for chat_id=%s target=%s", chat_id, endpoint_label)
                 return False
             data = {
                 "chat_id": chat_id,
@@ -136,18 +138,31 @@ class TelegramNotifier:
                     logger.debug("Telegram message sent successfully to chat %s", chat_id)
                     return True
                 logger.error(
-                    "Telegram API error for chat %s: %s",
+                    "Telegram API error for chat_id=%s target=%s: %s",
                     chat_id,
+                    endpoint_label,
                     result.get("description"),
                 )
                 return False
         except ProxyConfigurationError as e:
             proxy_uri = resolve_proxy_uri(self.proxy_config)
             proxy_label = mask_proxy_uri(proxy_uri) if proxy_uri else "unknown"
-            logger.error("Telegram proxy configuration error (%s): %s", proxy_label, e)
+            logger.error(
+                "Telegram proxy configuration error for chat_id=%s target=%s proxy=%s: %s",
+                chat_id,
+                redact_url_for_logs(f"{self.api_base_url}/sendMessage"),
+                proxy_label,
+                e,
+            )
             return False
         except Exception as e:
-            logger.error(f"Error sending Telegram message to {chat_id}: {str(e)}", exc_info=True)
+            logger.error(
+                "Telegram request failed for chat_id=%s target=%s: %s",
+                chat_id,
+                redact_url_for_logs(f"{self.api_base_url}/sendMessage"),
+                str(e),
+                exc_info=True,
+            )
             return False
 
     def send_service_alert(self, service_name: str, status: str, details: str) -> bool:

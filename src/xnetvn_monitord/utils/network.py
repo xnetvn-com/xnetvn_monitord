@@ -168,6 +168,57 @@ def mask_proxy_uri(proxy_uri: str) -> str:
         return "[invalid proxy uri]"
 
 
+def redact_url_for_logs(url: str, include_path: bool = False) -> str:
+    """Redact credentials and query strings from URLs before logging.
+
+    Args:
+        url: Raw URL string.
+        include_path: Include the path component without query parameters.
+
+    Returns:
+        Sanitized URL label.
+    """
+    try:
+        parsed = urlparse(url)
+        if not parsed.scheme or not parsed.hostname:
+            return "[invalid url]"
+
+        netloc = parsed.hostname
+        if parsed.port:
+            netloc = f"{netloc}:{parsed.port}"
+
+        path = parsed.path if include_path else ""
+        return f"{parsed.scheme}://{netloc}{path}"
+    except Exception:
+        return "[invalid url]"
+
+
+def read_response_preview(response: Any, limit: int = 256) -> str:
+    """Read and sanitize a short response payload preview for logs.
+
+    Args:
+        response: Response-like object exposing read().
+        limit: Maximum bytes to read.
+
+    Returns:
+        A single-line preview string.
+    """
+    if response is None or not hasattr(response, "read"):
+        return ""
+
+    try:
+        payload = response.read(limit)
+    except Exception:
+        return ""
+
+    if isinstance(payload, bytes):
+        text = payload.decode("utf-8", errors="replace")
+    else:
+        text = str(payload)
+
+    return " ".join(text.split())[:limit]
+
+
 def resolve_proxy_uri(proxy_config: Optional[Dict]) -> Optional[str]:
     """Resolve proxy URI from a configuration dictionary.
 

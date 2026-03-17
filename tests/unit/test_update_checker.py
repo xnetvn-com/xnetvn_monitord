@@ -211,14 +211,20 @@ class TestUpdateCheckerResults:
 class TestUpdateCheckerApplyUpdate:
     """Tests for applying updates and refreshing example files."""
 
-    def test_should_refresh_example_files_without_overwriting_user_config(self, tmp_path, monkeypatch) -> None:
-        """Ensure example files are refreshed while user config stays intact."""
+    def test_should_refresh_update_script_and_example_files_without_overwriting_user_config(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        """Ensure Python auto-update matches manual updater for core artifacts."""
         install_dir = tmp_path / "install"
         install_dir.mkdir()
 
         target_dir = install_dir / "xnetvn_monitord"
         target_dir.mkdir()
         (target_dir / "old.txt").write_text("old")
+
+        scripts_dir = install_dir / "scripts"
+        scripts_dir.mkdir()
+        (scripts_dir / "update.sh").write_text("#!/usr/bin/env bash\necho old updater\n")
 
         config_dir = install_dir / "config"
         config_dir.mkdir()
@@ -231,6 +237,10 @@ class TestUpdateCheckerApplyUpdate:
         source_dir = package_root / "src" / "xnetvn_monitord"
         source_dir.mkdir(parents=True)
         (source_dir / "new.txt").write_text("new")
+
+        release_scripts = package_root / "scripts"
+        release_scripts.mkdir(parents=True)
+        (release_scripts / "update.sh").write_text("#!/usr/bin/env bash\necho new updater\n")
 
         release_config = package_root / "config"
         release_config.mkdir(parents=True)
@@ -264,6 +274,7 @@ class TestUpdateCheckerApplyUpdate:
 
         assert checker.apply_update("https://example.com/release.tar.gz") is True
         assert (install_dir / "xnetvn_monitord" / "new.txt").read_text() == "new"
+        assert (scripts_dir / "update.sh").read_text() == "#!/usr/bin/env bash\necho new updater\n"
         assert (config_dir / "main.example.yaml").read_text() == "new example"
         assert (config_dir / ".env.example").read_text() == "new env"
         assert (config_dir / "main.yaml").read_text() == "user-config"

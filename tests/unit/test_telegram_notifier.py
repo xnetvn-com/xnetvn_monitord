@@ -15,6 +15,7 @@
 """Unit tests for TelegramNotifier."""
 
 import json
+import logging
 from urllib.error import URLError
 from urllib.parse import parse_qs
 
@@ -138,6 +139,27 @@ class TestTelegramNotifierSendMessage:
         )
 
         assert notifier._send_message("1", "message") is False
+
+    def test_should_log_sanitized_request_context_on_url_error(self, mocker, caplog):
+        """Test outbound Telegram failures log safe operational context."""
+        caplog.set_level(logging.ERROR)
+        mocker.patch(
+            "xnetvn_monitord.notifiers.telegram_notifier.open_url",
+            side_effect=URLError("network down"),
+        )
+
+        notifier = TelegramNotifier(
+            {
+                "enabled": True,
+                "bot_token": "secret-token",
+                "chat_ids": ["1"],
+            }
+        )
+
+        assert notifier._send_message("1", "message") is False
+        assert "chat_id=1" in caplog.text
+        assert "https://api.telegram.org" in caplog.text
+        assert "secret-token" not in caplog.text
 
     def test_should_handle_generic_exception(self, mocker):
         """Test generic exception handling in send message."""

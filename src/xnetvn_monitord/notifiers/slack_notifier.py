@@ -29,6 +29,8 @@ from xnetvn_monitord.utils.network import (
     is_http_url,
     mask_proxy_uri,
     open_url,
+    read_response_preview,
+    redact_url_for_logs,
     resolve_proxy_uri,
 )
 
@@ -120,8 +122,9 @@ class SlackNotifier:
             True if request succeeded, False otherwise.
         """
         try:
+            target_label = redact_url_for_logs(self.webhook_url)
             if not is_http_url(self.webhook_url):
-                logger.error("Slack webhook URL has invalid scheme: %s", self.webhook_url)
+                logger.error("Slack webhook URL has invalid scheme: %s", target_label)
                 return False
 
             data = json.dumps(payload).encode("utf-8")
@@ -147,17 +150,41 @@ class SlackNotifier:
                     logger.debug("Slack notification sent successfully")
                     return True
 
-                logger.error("Slack webhook returned status %s", status_code)
+                logger.error(
+                    "Slack webhook request failed target=%s status=%s response=%s",
+                    target_label,
+                    status_code,
+                    read_response_preview(response) or "<empty>",
+                )
                 return False
 
+        except urllib.error.HTTPError as exc:
+            logger.error(
+                "Slack webhook request failed target=%s status=%s response=%s",
+                redact_url_for_logs(self.webhook_url),
+                exc.code,
+                read_response_preview(exc) or str(exc),
+            )
+            return False
+
         except urllib.error.URLError as exc:
-            logger.error("Slack URL error: %s", exc)
+            logger.error("Slack webhook request error target=%s: %s", redact_url_for_logs(self.webhook_url), exc)
             return False
         except ProxyConfigurationError as exc:
             proxy_uri = resolve_proxy_uri(self.proxy_config)
             proxy_label = mask_proxy_uri(proxy_uri) if proxy_uri else "unknown"
-            logger.error("Slack proxy configuration error (%s): %s", proxy_label, exc)
+            logger.error(
+                "Slack proxy configuration error target=%s proxy=%s: %s",
+                redact_url_for_logs(self.webhook_url),
+                proxy_label,
+                exc,
+            )
             return False
         except Exception as exc:
-            logger.error("Slack notification error: %s", exc, exc_info=True)
+            logger.error(
+                "Slack notification error target=%s: %s",
+                redact_url_for_logs(self.webhook_url),
+                exc,
+                exc_info=True,
+            )
             return False

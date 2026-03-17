@@ -402,6 +402,18 @@ class UpdateChecker:
                 shutil.rmtree(target_dir)
                 shutil.copytree(source_dir, target_dir)
 
+                release_scripts_dir = release_root / "scripts"
+                if release_scripts_dir.exists():
+                    update_script = release_scripts_dir / "update.sh"
+                    if update_script.exists():
+                        scripts_dir = self.install_dir / "scripts"
+                        scripts_dir.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(update_script, scripts_dir / "update.sh")
+                    else:
+                        logger.warning("Release missing scripts/update.sh")
+                else:
+                    logger.warning("Release missing scripts directory")
+
                 config_dir = self.install_dir / "config"
                 config_dir.mkdir(parents=True, exist_ok=True)
                 release_config_dir = release_root / "config"

@@ -58,7 +58,9 @@ separated clearly for easier extensibility.
 
 - Checks versions via GitHub Releases.
 - Writes last check state to state_file.
-- Optionally sends notifications or performs auto update.
+- Uses the running package version as the source of truth for update decisions.
+- Optionally sends notifications or performs auto update, refreshing the
+   installed update script and example config files.
 
 ### ConfigLoader and EnvLoader
 

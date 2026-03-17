@@ -88,6 +88,9 @@ Manual update:
 - sudo bash /opt/xnetvn_monitord/scripts/update.sh
 - Or run from the repository clone: sudo bash scripts/update.sh
 
+The daemon update checker uses the running package version as the source of
+truth for update decisions.
+
 ## Configuration
 
 - Default config file: config/main.yaml (see config/main.example.yaml).
@@ -96,7 +99,9 @@ Manual update:
 Key sections:
 
 - general: app metadata, logging, PID.
-- update_checker: update checks and optional auto update.
+- update_checker: update checks and optional auto update. It uses the running
+    package version and refreshes the installed update script plus example
+    files during auto update.
 - service_monitor: services, intervals, check methods, recovery actions.
 - resource_monitor: CPU/RAM/Disk thresholds, recovery commands, restart services.
 - notifications: Email/Telegram/Slack/Discord/Webhook, rate limits, content

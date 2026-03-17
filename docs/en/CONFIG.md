@@ -31,7 +31,9 @@ Primary sections:
 
 ## general
 
-- app_name, app_version: display metadata.
+- app_name: display metadata.
+- Legacy `general.app_version` values from older configs are ignored; update
+  decisions use the running package version.
 - check_interval: main loop interval (seconds).
 - logging: level, file, rotation.
 - pid_file, work_dir: PID and runtime directory.
@@ -64,7 +66,8 @@ update_checker:
 ```
 
 - GITHUB_TOKEN can be set in the environment to avoid rate limits.
-- auto_update is best-effort and restarts the service after updating.
+- auto_update is best-effort, refreshes the installed `scripts/update.sh` plus
+  example config files, and restarts the service after updating.
 
 ## service_monitor
 

@@ -15,6 +15,7 @@
 """Unit tests for DiscordNotifier."""
 
 import ssl
+import logging
 from urllib.error import URLError
 
 from xnetvn_monitord.notifiers.discord_notifier import DiscordNotifier
@@ -106,6 +107,25 @@ class TestDiscordNotifier:
         notifier = DiscordNotifier({"enabled": True, "webhook_url": "https://example.com"})
 
         assert notifier.send_notification("test") is False
+
+    def test_should_log_sanitized_target_on_url_error(self, mocker, caplog):
+        """Test Discord errors log redacted endpoint context."""
+        caplog.set_level(logging.ERROR)
+        mocker.patch(
+            "xnetvn_monitord.notifiers.discord_notifier.open_url",
+            side_effect=URLError("down"),
+        )
+
+        notifier = DiscordNotifier(
+            {
+                "enabled": True,
+                "webhook_url": "https://discord.com/api/webhooks/123/secret-token",
+            }
+        )
+
+        assert notifier.send_notification("test") is False
+        assert "https://discord.com" in caplog.text
+        assert "secret-token" not in caplog.text
 
     def test_should_skip_live_test_when_disabled(self):
         """Test connection check skips live test when disabled."""

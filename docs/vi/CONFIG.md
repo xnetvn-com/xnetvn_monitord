@@ -31,7 +31,9 @@ Các khối chính:
 
 ## general
 
-- app_name, app_version: thông tin hiển thị.
+- app_name: thông tin hiển thị.
+- Các cấu hình cũ có thể vẫn còn `general.app_version`, nhưng trường này bị bỏ
+  qua; quyết định update dùng version thực tế của package đang chạy.
 - check_interval: chu kỳ vòng lặp chính (giây).
 - logging: level, file, rotation.
 - pid_file, work_dir: PID và thư mục runtime.
@@ -64,7 +66,8 @@ update_checker:
 ```
 
 - GITHUB_TOKEN có thể được đặt trong môi trường để tránh rate limit.
-- auto_update chỉ chạy best-effort và sẽ restart service sau khi cập nhật.
+- auto_update chạy theo kiểu best-effort, làm mới `scripts/update.sh` và các
+  file config ví dụ, rồi restart service sau khi cập nhật.
 
 ## service_monitor
 

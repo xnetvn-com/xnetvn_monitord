@@ -58,7 +58,9 @@ ràng để dễ mở rộng.
 
 - Kiểm tra phiên bản qua GitHub Releases.
 - Ghi trạng thái lần kiểm tra vào state_file.
-- Tùy chọn gửi thông báo hoặc auto update.
+- Dùng version thực tế của package đang chạy làm nguồn chuẩn khi so sánh update.
+- Tùy chọn gửi thông báo hoặc auto update, đồng thời làm mới update script và
+   các file config ví dụ đã cài.
 
 ### ConfigLoader và EnvLoader
 

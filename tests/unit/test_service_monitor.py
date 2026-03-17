@@ -21,6 +21,7 @@ and automatic restart functionality.
 import subprocess
 import time
 import urllib.error
+import logging
 from unittest.mock import MagicMock, call
 
 from xnetvn_monitord.monitors.service_monitor import ServiceMonitor
@@ -360,6 +361,34 @@ class TestServiceMonitorProcessRegexCheck:
         result = monitor._check_process_regex(service_config)
 
         assert result is True
+
+
+class TestServiceMonitorHttpCheckLogging:
+    """Tests for detailed HTTP/HTTPS failure logging."""
+
+    def test_should_log_detailed_context_on_connection_error(self, mocker, caplog):
+        """Test HTTP check failures log method, target, and exception details."""
+        caplog.set_level(logging.ERROR)
+        mocker.patch(
+            "xnetvn_monitord.monitors.service_monitor.open_url",
+            side_effect=urllib.error.URLError("connection refused"),
+        )
+
+        monitor = ServiceMonitor({"enabled": True})
+
+        result = monitor._check_http(
+            {
+                "name": "health-endpoint",
+                "url": "https://example.com/health?token=secret",
+                "http_method": "POST",
+                "timeout_seconds": 5,
+            }
+        )
+
+        assert result["running"] is False
+        assert "POST" in caplog.text
+        assert "https://example.com/health" in caplog.text
+        assert "token=secret" not in caplog.text
 
     def test_should_return_false_when_ps_returns_nonzero(self, mocker):
         """Test process regex returns False when ps command fails."""

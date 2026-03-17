@@ -22,6 +22,7 @@ from xnetvn_monitord.utils.network import (
     ProxyConfigurationError,
     mask_proxy_uri,
     open_url,
+    redact_url_for_logs,
     resolve_proxy_uri,
 )
 
@@ -51,3 +52,12 @@ def test_open_url_rejects_invalid_proxy_scheme() -> None:
             proxy_config={"enabled": True, "uri": "ftp://127.0.0.1:8080"},
             only_ipv4=False,
         )
+
+
+def test_redact_url_for_logs_hides_query_and_credentials() -> None:
+    """Hide sensitive URL components in log labels."""
+    assert redact_url_for_logs("https://user:pass@example.com/api?token=secret") == "https://example.com"
+    assert (
+        redact_url_for_logs("https://user:pass@example.com/health/live?token=secret", include_path=True)
+        == "https://example.com/health/live"
+    )
