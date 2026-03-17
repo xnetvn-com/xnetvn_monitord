@@ -38,6 +38,10 @@
 
 ### Installation
 
+By default, `scripts/install.sh` installs from the current local repository
+directory. Use `--releases=latest` to install from the latest published GitHub
+release, or `--releases=vX.Y.Z` to install a specific published release tag.
+
 ```bash
 # Clone repository
 git clone https://github.com/xnetvn-com/xnetvn_monitord.git
@@ -45,6 +49,12 @@ cd xnetvn_monitord
 
 # Run installation script
 sudo bash scripts/install.sh
+
+# Install from the latest GitHub release instead of the local source tree
+sudo bash scripts/install.sh --releases=latest
+
+# Install from a specific GitHub release tag
+sudo bash scripts/install.sh --releases=v1.2.0
 
 # Note (Ubuntu 24 LTS / PEP 668): the installer uses
 # /opt/xnetvn_monitord/.venv for Python packages.

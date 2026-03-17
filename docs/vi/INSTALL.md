@@ -36,6 +36,12 @@ Script scripts/install.sh sẽ:
 	/opt/xnetvn_monitord/config/.env.example (ghi đè file mẫu).
 - Cài systemd unit vào /etc/systemd/system/xnetvn_monitord.service.
 
+Mặc định, script cài đặt sẽ dùng thư mục source local hiện tại của repo làm
+nguồn cài đặt. Có thể chuyển sang dùng GitHub release bằng:
+
+- `--releases=latest` để lấy bản phát hành mới nhất
+- `--releases=vX.Y.Z` để lấy một tag phát hành cụ thể
+
 Lưu ý: script không ghi đè /opt/xnetvn_monitord/config/main.yaml hoặc
 /opt/xnetvn_monitord/config/.env nếu đã tồn tại.
 
@@ -49,6 +55,18 @@ Thực hiện:
 
 ```
 sudo bash scripts/install.sh
+```
+
+Cài từ bản phát hành GitHub mới nhất thay vì source local:
+
+```
+sudo bash scripts/install.sh --releases=latest
+```
+
+Cài từ một tag phát hành cụ thể:
+
+```
+sudo bash scripts/install.sh --releases=v1.2.0
 ```
 
 Sau khi cài đặt, chỉnh sửa cấu hình:

@@ -53,7 +53,30 @@ Tuân thủ Conventional Commits (tiếng Anh):
 - Chạy bash scripts/run_tests.sh.
 - Đảm bảo unit/integration/security tests pass.
 
-## 7. Pull Request checklist
+## 7. Tùy biến Copilot theo workspace
+
+Repo này có sẵn các file tùy biến Copilot trong `.github/` để hỗ trợ contributor
+và AI agent làm việc đúng quy ước của dự án.
+
+### Instructions
+
+- `.github/instructions/xnetvn_monitord-python.instructions.md`
+- `.github/instructions/xnetvn_monitord-ops.instructions.md`
+- `.github/instructions/xnetvn_monitord-readme.instructions.md`
+- `.github/instructions/xnetvn_monitord-docs.instructions.md`
+- `.github/instructions/xnetvn_monitord-github-workflows.instructions.md`
+
+### Prompts
+
+- `.github/prompts/sync-monitor-docs.prompt.md` để đồng bộ tài liệu
+- `.github/prompts/release-readiness.prompt.md` để rà soát trước phát hành
+
+### Agents
+
+- `.github/agents/ops-safety-review.agent.md` để review an toàn vận hành
+- `.github/agents/release-readiness-review.agent.md` để review mức sẵn sàng phát hành
+
+## 8. Pull Request checklist
 
 - [ ] Đã chạy test
 - [ ] Đã cập nhật tài liệu

@@ -15,8 +15,9 @@
 # limitations under the License.
 
 # xNetVN Monitor Daemon - Installation Script
-# This script downloads and installs xNetVN monitor daemon from the official
-# GitHub releases: https://github.com/xnetvn-com/xnetvn_monitord/releases
+# By default, this script installs from the current local source directory.
+# Use --releases=latest or --releases=vX.Y.Z to install from GitHub releases:
+# https://github.com/xnetvn-com/xnetvn_monitord/releases
 
 set -euo pipefail
 IFS=$'\n\t'
@@ -33,13 +34,15 @@ CONFIG_DIR="$INSTALL_DIR/config"
 LOG_DIR="/var/log/xnetvn_monitord"
 SYSTEMD_SERVICE="/etc/systemd/system/xnetvn_monitord.service"
 VENV_DIR="$INSTALL_DIR/.venv"
-RELEASE_VERSION=""  # empty = latest; set via --version to install a specific release tag
+INSTALL_SOURCE="local"
+RELEASE_VERSION=""
 DRY_RUN=false
 # When DRY_RUN=true we skip destructive/system operations for safe testing
 
 # Internal state
 RELEASE_DIR=""
 RELEASE_TAG=""
+SOURCE_DIR=""
 _TEMP_DIR=""
 
 # Functions
@@ -60,27 +63,55 @@ usage() {
 Usage: scripts/install.sh [options]
 
 Options:
-  --version TAG        Install a specific release version (e.g. v1.2.3); default: latest
+  --releases VALUE     Install from GitHub releases (`latest` or `vX.Y.Z`)
   --install-dir PATH   Override install directory (default: /opt/xnetvn_monitord)
   --dry-run            Simulate installation without making changes
   --help               Show this help
 USAGE
 }
 
+validate_release_selector() {
+    local selector="$1"
+
+    if [ "$selector" = "latest" ]; then
+        return 0
+    fi
+
+    if [[ "$selector" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        return 0
+    fi
+
+    log_error "Invalid value for --releases: $selector"
+    log_error "Expected 'latest' or a tag in the form vX.Y.Z"
+    exit 1
+}
+
 parse_args() {
     while [ "$#" -gt 0 ]; do
         case "$1" in
-            --version)
+            --releases)
                 if [ "$#" -lt 2 ]; then
-                    log_error "Missing value for --version"
+                    log_error "Missing value for --releases"
                     usage
                     exit 1
                 fi
-                RELEASE_VERSION="$2"
+                INSTALL_SOURCE="release"
+                validate_release_selector "$2"
+                if [ "$2" = "latest" ]; then
+                    RELEASE_VERSION=""
+                else
+                    RELEASE_VERSION="$2"
+                fi
                 shift 2
                 ;;
-            --version=*)
-                RELEASE_VERSION="${1#*=}"
+            --releases=*)
+                INSTALL_SOURCE="release"
+                validate_release_selector "${1#*=}"
+                if [ "${1#*=}" = "latest" ]; then
+                    RELEASE_VERSION=""
+                else
+                    RELEASE_VERSION="${1#*=}"
+                fi
                 shift
                 ;;
             --install-dir)
@@ -119,6 +150,36 @@ parse_args() {
                 ;;
         esac
     done
+}
+
+resolve_local_source_dir() {
+    SOURCE_DIR="$(pwd -P)"
+
+    local required_paths=(
+        "$SOURCE_DIR/src/xnetvn_monitord"
+        "$SOURCE_DIR/config"
+        "$SOURCE_DIR/scripts/update.sh"
+        "$SOURCE_DIR/systemd/xnetvn_monitord.service"
+    )
+
+    local missing_paths=()
+    local path
+    for path in "${required_paths[@]}"; do
+        if [ ! -e "$path" ]; then
+            missing_paths+=("$path")
+        fi
+    done
+
+    if [ ${#missing_paths[@]} -gt 0 ]; then
+        log_error "Current directory does not look like a valid xnetvn_monitord source tree: $SOURCE_DIR"
+        for path in "${missing_paths[@]}"; do
+            log_error "Missing required path: $path"
+        done
+        log_error "Run the installer from the repository root, or use --releases=latest / --releases=vX.Y.Z"
+        exit 1
+    fi
+
+    RELEASE_TAG="local"
 }
 
 check_root() {
@@ -406,7 +467,7 @@ install_python_packages() {
 
     if [ "$DRY_RUN" = true ]; then
         log_info "Dry-run: would create/use virtual environment at $VENV_DIR"
-        log_info "Dry-run: would install Python packages from release requirements.txt"
+        log_info "Dry-run: would install Python packages from $SOURCE_DIR/requirements.txt"
         return 0
     fi
 
@@ -433,10 +494,10 @@ install_python_packages() {
 
     "$venv_python" -m pip install --upgrade pip
 
-    if [ -n "$RELEASE_DIR" ] && [ -f "$RELEASE_DIR/requirements.txt" ]; then
-        "$venv_pip" install -r "$RELEASE_DIR/requirements.txt"
+    if [ -n "$SOURCE_DIR" ] && [ -f "$SOURCE_DIR/requirements.txt" ]; then
+        "$venv_pip" install -r "$SOURCE_DIR/requirements.txt"
     else
-        log_warning "requirements.txt not found in release, falling back to core packages"
+        log_warning "requirements.txt not found in source, falling back to core packages"
         "$venv_pip" install PyYAML psutil
     fi
 }
@@ -459,30 +520,35 @@ create_directories() {
 }
 
 copy_files() {
-    log_info "Copying application files from release..."
+    log_info "Copying application files from source..."
 
     if [ "$DRY_RUN" = true ]; then
-        log_info "Dry-run: would copy source code, scripts, configs, and systemd service from release $RELEASE_TAG"
+        if [ "$INSTALL_SOURCE" = "local" ]; then
+            log_info "Dry-run: would use local source directory: $SOURCE_DIR"
+            log_info "Dry-run: would copy source code, scripts, configs, and systemd service from local source"
+        else
+            log_info "Dry-run: would copy source code, scripts, configs, and systemd service from release $RELEASE_TAG"
+        fi
         return 0
     fi
 
-    # Copy source code from the official release
-    if [ -d "$RELEASE_DIR/src/xnetvn_monitord" ]; then
-        cp -r "$RELEASE_DIR/src/xnetvn_monitord" "$INSTALL_DIR/"
-        log_info "Source code copied from release $RELEASE_TAG"
+    # Copy source code from the selected source
+    if [ -d "$SOURCE_DIR/src/xnetvn_monitord" ]; then
+        cp -r "$SOURCE_DIR/src/xnetvn_monitord" "$INSTALL_DIR/"
+        log_info "Source code copied from $RELEASE_TAG"
     else
-        log_error "Source directory not found in release: $RELEASE_DIR/src/xnetvn_monitord"
+        log_error "Source directory not found: $SOURCE_DIR/src/xnetvn_monitord"
         exit 1
     fi
 
-    # Copy update script from release
-    if [ -f "$RELEASE_DIR/scripts/update.sh" ]; then
+    # Copy update script from the selected source
+    if [ -f "$SOURCE_DIR/scripts/update.sh" ]; then
         mkdir -p "$INSTALL_DIR/scripts"
-        cp "$RELEASE_DIR/scripts/update.sh" "$INSTALL_DIR/scripts/update.sh"
+        cp "$SOURCE_DIR/scripts/update.sh" "$INSTALL_DIR/scripts/update.sh"
         chmod 755 "$INSTALL_DIR/scripts/update.sh"
         log_info "Update script copied to $INSTALL_DIR/scripts/update.sh"
     else
-        log_warning "Update script not found in release"
+        log_warning "Update script not found in source"
     fi
 
     # Copy configuration (do not overwrite existing user config)
@@ -490,52 +556,52 @@ copy_files() {
     if [ -f "$CONFIG_DIR/main.yaml" ]; then
         log_warning "Configuration file already exists: $CONFIG_DIR/main.yaml"
         log_warning "Skipping configuration copy to avoid overwriting user changes"
-    elif [ -f "$RELEASE_DIR/config/main.example.yaml" ]; then
-        cp "$RELEASE_DIR/config/main.example.yaml" "$CONFIG_DIR/main.yaml"
+    elif [ -f "$SOURCE_DIR/config/main.example.yaml" ]; then
+        cp "$SOURCE_DIR/config/main.example.yaml" "$CONFIG_DIR/main.yaml"
         log_warning "Using example configuration. Please edit $CONFIG_DIR/main.yaml"
-    elif [ -f "$RELEASE_DIR/config/main.yaml" ]; then
-        cp "$RELEASE_DIR/config/main.yaml" "$CONFIG_DIR/"
+    elif [ -f "$SOURCE_DIR/config/main.yaml" ]; then
+        cp "$SOURCE_DIR/config/main.yaml" "$CONFIG_DIR/"
         log_info "Configuration file copied"
     else
-        log_error "No configuration file found in release"
+        log_error "No configuration file found in source"
         exit 1
     fi
 
     if [ -f "$CONFIG_DIR/.env" ]; then
         log_warning "Environment file already exists: $CONFIG_DIR/.env"
         log_warning "Skipping environment copy to avoid overwriting user changes"
-    elif [ -f "$RELEASE_DIR/config/.env.example" ]; then
-        cp "$RELEASE_DIR/config/.env.example" "$CONFIG_DIR/.env"
+    elif [ -f "$SOURCE_DIR/config/.env.example" ]; then
+        cp "$SOURCE_DIR/config/.env.example" "$CONFIG_DIR/.env"
         log_warning "Using example environment file. Please edit $CONFIG_DIR/.env"
     else
-        log_warning "Environment example file not found in release"
+        log_warning "Environment example file not found in source"
     fi
 
-    if [ -f "$RELEASE_DIR/config/main.example.yaml" ]; then
-        cp "$RELEASE_DIR/config/main.example.yaml" "$CONFIG_DIR/main.example.yaml"
+    if [ -f "$SOURCE_DIR/config/main.example.yaml" ]; then
+        cp "$SOURCE_DIR/config/main.example.yaml" "$CONFIG_DIR/main.example.yaml"
         log_info "Configuration example file refreshed"
     else
-        log_warning "Configuration example file not found in release"
+        log_warning "Configuration example file not found in source"
     fi
 
-    if [ -f "$RELEASE_DIR/config/.env.example" ]; then
-        cp "$RELEASE_DIR/config/.env.example" "$CONFIG_DIR/.env.example"
+    if [ -f "$SOURCE_DIR/config/.env.example" ]; then
+        cp "$SOURCE_DIR/config/.env.example" "$CONFIG_DIR/.env.example"
         log_info "Environment example file refreshed"
     else
-        log_warning "Environment example file not found in release"
+        log_warning "Environment example file not found in source"
     fi
 
-    # Copy systemd service from release
-    if [ -f "$RELEASE_DIR/systemd/xnetvn_monitord.service" ]; then
+    # Copy systemd service from the selected source
+    if [ -f "$SOURCE_DIR/systemd/xnetvn_monitord.service" ]; then
         if [ -f "$SYSTEMD_SERVICE" ]; then
             log_warning "Systemd service file already exists: $SYSTEMD_SERVICE"
             log_warning "Skipping service file copy to avoid overwriting changes"
         else
-            cp "$RELEASE_DIR/systemd/xnetvn_monitord.service" "$SYSTEMD_SERVICE"
+            cp "$SOURCE_DIR/systemd/xnetvn_monitord.service" "$SYSTEMD_SERVICE"
             log_info "Systemd service file copied"
         fi
     else
-        log_error "Systemd service file not found in release"
+        log_error "Systemd service file not found in source"
         exit 1
     fi
 }
@@ -604,41 +670,50 @@ main() {
     parse_args "$@"
 
     log_info "Starting xNetVN Monitor Daemon installation..."
-    log_info "Source: https://github.com/xnetvn-com/xnetvn_monitord/releases"
+    if [ "$INSTALL_SOURCE" = "local" ]; then
+        resolve_local_source_dir
+        log_info "Source: local directory ($SOURCE_DIR)"
+    else
+        log_info "Source: https://github.com/xnetvn-com/xnetvn_monitord/releases"
+    fi
     echo ""
 
     check_root
     check_dependencies
 
-    # Fetch release metadata from GitHub
-    local release_info
-    # Allow tests to inject release info via environment variable to avoid network calls
-    # The variable should contain three newline-separated values: tag_name, tarball_url, html_url
-    if [ -n "${XNETVN_MONITORD_TEST_LATEST_RELEASE-}" ]; then
-        release_info="$XNETVN_MONITORD_TEST_LATEST_RELEASE"
-    else
-        release_info="$(get_release_info || true)"
+    if [ "$INSTALL_SOURCE" = "release" ]; then
+        # Fetch release metadata from GitHub
+        local release_info
+        # Allow tests to inject release info via environment variable to avoid network calls
+        # The variable should contain three newline-separated values: tag_name, tarball_url, html_url
+        if [ -n "${XNETVN_MONITORD_TEST_LATEST_RELEASE-}" ]; then
+            release_info="$XNETVN_MONITORD_TEST_LATEST_RELEASE"
+        else
+            release_info="$(get_release_info || true)"
+        fi
+
+        local release_lines
+        readarray -t release_lines <<< "$release_info"
+        RELEASE_TAG="${release_lines[0]:-}"
+        local tarball_url="${release_lines[1]:-}"
+        local release_html_url="${release_lines[2]:-}"
+
+        if [ -z "$RELEASE_TAG" ] || [ -z "$tarball_url" ]; then
+            log_error "Unable to fetch release metadata from GitHub"
+            log_error "Debug output:"
+            echo "$release_info" >&2
+            exit 1
+        fi
+
+        log_info "Release: $RELEASE_TAG"
+        if [ -n "$release_html_url" ]; then
+            log_info "Release URL: $release_html_url"
+        fi
+
+        download_release "$tarball_url"
+        SOURCE_DIR="$RELEASE_DIR"
     fi
 
-    local release_lines
-    readarray -t release_lines <<< "$release_info"
-    RELEASE_TAG="${release_lines[0]:-}"
-    local tarball_url="${release_lines[1]:-}"
-    local release_html_url="${release_lines[2]:-}"
-
-    if [ -z "$RELEASE_TAG" ] || [ -z "$tarball_url" ]; then
-        log_error "Unable to fetch release metadata from GitHub"
-        log_error "Debug output:"
-        echo "$release_info" >&2
-        exit 1
-    fi
-
-    log_info "Release: $RELEASE_TAG"
-    if [ -n "$release_html_url" ]; then
-        log_info "Release URL: $release_html_url"
-    fi
-
-    download_release "$tarball_url"
     create_directories
     install_python_packages
     copy_files

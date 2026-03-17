@@ -53,7 +53,30 @@ Follow Conventional Commits (in English):
 - Run `bash scripts/run_tests.sh`.
 - Ensure unit/integration/security tests pass.
 
-## 7. Pull Request checklist
+## 7. Workspace Copilot Customizations
+
+This repository ships with Copilot workspace customizations under `.github/` to
+help contributors and AI agents follow repository-specific rules.
+
+### Instructions
+
+- `.github/instructions/xnetvn_monitord-python.instructions.md`
+- `.github/instructions/xnetvn_monitord-ops.instructions.md`
+- `.github/instructions/xnetvn_monitord-readme.instructions.md`
+- `.github/instructions/xnetvn_monitord-docs.instructions.md`
+- `.github/instructions/xnetvn_monitord-github-workflows.instructions.md`
+
+### Prompts
+
+- `.github/prompts/sync-monitor-docs.prompt.md` for documentation sync
+- `.github/prompts/release-readiness.prompt.md` for pre-release checks
+
+### Agents
+
+- `.github/agents/ops-safety-review.agent.md` for ops safety reviews
+- `.github/agents/release-readiness-review.agent.md` for release readiness reviews
+
+## 8. Pull Request checklist
 
 - [ ] Tests have been run
 - [ ] Documentation has been updated

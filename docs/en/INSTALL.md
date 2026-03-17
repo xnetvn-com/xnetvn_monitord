@@ -36,6 +36,12 @@ The scripts/install.sh script will:
   /opt/xnetvn_monitord/config/.env.example (overwriting template files).
 - Install the systemd unit to /etc/systemd/system/xnetvn_monitord.service.
 
+By default, the installer uses the current local repository directory as the
+installation source. You can switch to GitHub release artifacts with:
+
+- `--releases=latest` for the latest published release
+- `--releases=vX.Y.Z` for a specific published tag
+
 Note: the script does not overwrite /opt/xnetvn_monitord/config/main.yaml or
 /opt/xnetvn_monitord/config/.env if they already exist.
 
@@ -49,6 +55,18 @@ Run:
 
 ```
 sudo bash scripts/install.sh
+```
+
+Install from the latest published release instead of the local source tree:
+
+```
+sudo bash scripts/install.sh --releases=latest
+```
+
+Install from a specific published release tag:
+
+```
+sudo bash scripts/install.sh --releases=v1.2.0
 ```
 
 After installation, edit the configuration:

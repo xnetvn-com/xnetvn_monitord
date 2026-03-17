@@ -11,7 +11,7 @@ The CI/CD pipeline is modular and organized into the following categories:
 #### 1. CI (`.github/workflows/ci.yml`)
 **Main continuous integration workflow**
 
-- **Triggers**: Push to `main`, Pull requests to `main`, Manual dispatch
+- **Triggers**: Push to `main`, `feature/**`, `hotfix/**`, `release/**`, `bugfix/**`, `chore/**`, and `refactor/**`, Pull requests to `main`, Manual dispatch
 - **Jobs**:
   - `lint`: Code quality checks (Black, Isort, Flake8, Mypy, ShellCheck)
   - `tests`: Run pytest with coverage on Python 3.9, 3.10, 3.11, 3.12
@@ -45,7 +45,7 @@ The CI/CD pipeline is modular and organized into the following categories:
 #### 5. Security Scan (`.github/workflows/security-scan.yml`)
 **Security vulnerability scanning**
 
-- **Triggers**: Push to `main`/`development`, PRs, Weekly schedule (Mon 2:17 AM), Manual dispatch
+- **Triggers**: Push to `main`, `feature/**`, `hotfix/**`, `release/**`, `bugfix/**`, `chore/**`, and `refactor/**`, PRs to `main`, Weekly schedule (Mon 2:17 AM), Manual dispatch
 - **Tools**:
   - Bandit (with SARIF output for GitHub Security tab)
   - pip-audit (dependency vulnerability scan)
@@ -55,7 +55,7 @@ The CI/CD pipeline is modular and organized into the following categories:
 #### 6. CodeQL Advanced (`.github/workflows/codeql.yml`)
 **GitHub's semantic code analysis**
 
-- **Triggers**: Push to `main`, PRs, Weekly schedule (Wed 6:27 PM)
+- **Triggers**: Push to `main`, `feature/**`, `hotfix/**`, `release/**`, `bugfix/**`, `chore/**`, and `refactor/**`, PRs to `main`, Weekly schedule (Wed 6:27 PM)
 - **Languages**: Python
 - **Permissions**: `security-events: write`, `packages: read`, `actions: read`, `contents: read`
 - **Schedule**: `27 18 * * 3` (Every Wednesday at 6:27 PM)
@@ -288,6 +288,29 @@ When modifying workflows:
 4. Update this documentation
 5. Use Conventional Commits (e.g., `feat(ci):`, `fix(ci):`)
 
+## Copilot Customizations
+
+The repository also includes Copilot workspace customizations under `.github/`
+to keep code, docs, workflows, and operational changes aligned.
+
+### Included Files
+
+- Instructions in `.github/instructions/`
+- Prompts in `.github/prompts/`
+- Agents in `.github/agents/`
+
+Notable repository-specific customizations:
+
+- `xnetvn_monitord-python.instructions.md`
+- `xnetvn_monitord-ops.instructions.md`
+- `xnetvn_monitord-readme.instructions.md`
+- `xnetvn_monitord-docs.instructions.md`
+- `xnetvn_monitord-github-workflows.instructions.md`
+- `sync-monitor-docs.prompt.md`
+- `release-readiness.prompt.md`
+- `ops-safety-review.agent.md`
+- `release-readiness-review.agent.md`
+
 ## Status Badges
 
 Add to README.md:
@@ -301,3 +324,4 @@ Add to README.md:
 
 **Last Updated**: 2026-02-09
 **Maintained By**: xNetVN Inc.
+

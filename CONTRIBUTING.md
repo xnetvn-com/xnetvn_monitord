@@ -81,7 +81,7 @@ The repository uses modular GitHub Actions workflows. See [.github/WORKFLOWS.md]
 ### Workflow Triggers
 
 Most workflows trigger on:
-- Push to `main` branch
+- Push to `main`, `feature/**`, `hotfix/**`, `release/**`, `bugfix/**`, `chore/**`, and `refactor/**` branches
 - Pull requests to `main` branch
 - Manual dispatch (for testing)
 - Scheduled runs (for security/compliance)
@@ -102,7 +102,33 @@ Most workflows trigger on:
 - Pin action versions to major versions (e.g., `@v4`)
 - Use caching to speed up workflows
 
-## 8. Pull Request checklist
+## 8. Copilot Workspace Customizations
+
+This repository includes workspace-level Copilot customization files under `.github/`.
+
+### Instructions
+
+- `.github/instructions/xnetvn_monitord-python.instructions.md`
+- `.github/instructions/xnetvn_monitord-ops.instructions.md`
+- `.github/instructions/xnetvn_monitord-readme.instructions.md`
+- `.github/instructions/xnetvn_monitord-docs.instructions.md`
+- `.github/instructions/xnetvn_monitord-github-workflows.instructions.md`
+
+### Prompts
+
+- `.github/prompts/sync-monitor-docs.prompt.md` for documentation synchronization
+- `.github/prompts/release-readiness.prompt.md` for pre-release checks
+
+### Agents
+
+- `.github/agents/ops-safety-review.agent.md` for operational safety reviews
+- `.github/agents/release-readiness-review.agent.md` for release readiness reviews
+
+Use these workspace customizations when changing Python code, tests, install/update
+scripts, documentation, or GitHub Actions so the repository-specific rules are
+consistently applied.
+
+## 9. Pull Request checklist
 
 - [ ] Tests have been run
 - [ ] Documentation has been updated
