@@ -22,6 +22,7 @@ from xnetvn_monitord.utils.network import (
     ProxyConfigurationError,
     mask_proxy_uri,
     open_url,
+    read_response_preview,
     redact_url_for_logs,
     resolve_proxy_uri,
 )
@@ -61,3 +62,15 @@ def test_redact_url_for_logs_hides_query_and_credentials() -> None:
         redact_url_for_logs("https://user:pass@example.com/health/live?token=secret", include_path=True)
         == "https://example.com/health/live"
     )
+
+
+def test_read_response_preview_returns_empty_when_attribute_access_raises() -> None:
+    """Return an empty preview when response.read cannot be accessed safely."""
+
+    class BrokenResponse:
+        def __getattr__(self, name: str):
+            if name == "read":
+                raise KeyError("file")
+            raise AttributeError(name)
+
+    assert read_response_preview(BrokenResponse()) == ""

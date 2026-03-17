@@ -203,11 +203,19 @@ def read_response_preview(response: Any, limit: int = 256) -> str:
     Returns:
         A single-line preview string.
     """
-    if response is None or not hasattr(response, "read"):
+    if response is None:
         return ""
 
     try:
-        payload = response.read(limit)
+        read_method = getattr(response, "read")
+    except Exception:
+        return ""
+
+    if not callable(read_method):
+        return ""
+
+    try:
+        payload = read_method(limit)
     except Exception:
         return ""
 

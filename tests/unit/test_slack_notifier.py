@@ -14,8 +14,8 @@
 
 """Unit tests for SlackNotifier."""
 
-import ssl
 import logging
+import ssl
 from urllib.error import URLError
 
 from xnetvn_monitord.notifiers.slack_notifier import SlackNotifier

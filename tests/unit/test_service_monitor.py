@@ -18,10 +18,10 @@ This module contains comprehensive unit tests for service monitoring
 and automatic restart functionality.
 """
 
+import logging
 import subprocess
 import time
 import urllib.error
-import logging
 from unittest.mock import MagicMock, call
 
 from xnetvn_monitord.monitors.service_monitor import ServiceMonitor

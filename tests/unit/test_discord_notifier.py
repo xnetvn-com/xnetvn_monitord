@@ -14,8 +14,8 @@
 
 """Unit tests for DiscordNotifier."""
 
-import ssl
 import logging
+import ssl
 from urllib.error import URLError
 
 from xnetvn_monitord.notifiers.discord_notifier import DiscordNotifier
