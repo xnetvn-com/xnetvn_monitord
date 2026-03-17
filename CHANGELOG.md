@@ -7,6 +7,15 @@ This format follows Keep a Changelog and uses Semantic Versioning.
 ## [Unreleased]
 
 
+## [1.2.2] - 2026-03-17
+
+### Changed
+
+- Bump package to v1.2.2 and update docs/examples/prompts/tests (c0bbf64).
+- Fix: improve response handling in read_response_preview and add unit test for error cases (#23) (e086d2b).
+- Enhance update mechanism and logging for xNetVN Monitor Daemon (ca00ee5).
+- Docs: update installation instructions for non-technical users with direct GitHub installer commands (d826b59).
+
 ## [1.2.1] - 2026-03-17
 
 ### Added
