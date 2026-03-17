@@ -36,6 +36,8 @@ from xnetvn_monitord.utils.network import (
 
 logger = logging.getLogger(__name__)
 
+DISCORD_WEBHOOK_USER_AGENT = "xnetvn_monitord/1.0"
+
 
 class DiscordNotifier:
     """Send notifications to Discord via webhooks."""
@@ -122,7 +124,10 @@ class DiscordNotifier:
                 return False
 
             data = json.dumps(payload).encode("utf-8")
-            headers = {"Content-Type": "application/json"}
+            headers = {
+                "Content-Type": "application/json",
+                "User-Agent": DISCORD_WEBHOOK_USER_AGENT,
+            }
             request = urllib.request.Request(self.webhook_url, data=data, headers=headers, method="POST")
 
             ssl_context = None

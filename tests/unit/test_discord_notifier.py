@@ -86,6 +86,19 @@ class TestDiscordNotifier:
 
         assert notifier.send_notification("test") is True
 
+    def test_should_include_user_agent_header_in_request(self, mocker):
+        """Test Discord requests include a user-agent header."""
+        open_url_mock = mocker.patch(
+            "xnetvn_monitord.notifiers.discord_notifier.open_url",
+            return_value=DummyResponse(),
+        )
+
+        notifier = DiscordNotifier({"enabled": True, "webhook_url": "https://example.com"})
+
+        assert notifier.send_notification("test") is True
+        request = open_url_mock.call_args.args[0]
+        assert request.get_header("User-agent") == "xnetvn_monitord/1.0"
+
     def test_should_return_false_on_non_2xx_status(self, mocker):
         """Test non-2xx response returns False."""
         mocker.patch(
