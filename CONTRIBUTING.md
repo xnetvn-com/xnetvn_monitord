@@ -118,6 +118,11 @@ This repository includes workspace-level Copilot customization files under `.git
 
 - `.github/prompts/sync-monitor-docs.prompt.md` for documentation synchronization
 - `.github/prompts/release-readiness.prompt.md` for pre-release checks
+- `.github/prompts/review-ops-change.prompt.md` for operational-risk reviews
+- `.github/prompts/prepare-release-notes.prompt.md` for GitHub release notes drafting
+- `.github/prompts/prepare-release-tag.prompt.md` for version/tag preparation
+- `.github/prompts/publish-release-via-tag.prompt.md` for automatic tag-driven release publishing
+- `.github/prompts/sync-installation-docs.prompt.md` for install/update documentation sync
 
 ### Agents
 

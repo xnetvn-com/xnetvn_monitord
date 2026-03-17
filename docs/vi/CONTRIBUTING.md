@@ -70,6 +70,11 @@ và AI agent làm việc đúng quy ước của dự án.
 
 - `.github/prompts/sync-monitor-docs.prompt.md` để đồng bộ tài liệu
 - `.github/prompts/release-readiness.prompt.md` để rà soát trước phát hành
+- `.github/prompts/review-ops-change.prompt.md` để review rủi ro vận hành
+- `.github/prompts/prepare-release-notes.prompt.md` để soạn release notes
+- `.github/prompts/prepare-release-tag.prompt.md` để chuẩn bị version/tag phát hành
+- `.github/prompts/publish-release-via-tag.prompt.md` để phát hành tự động theo tag
+- `.github/prompts/sync-installation-docs.prompt.md` để đồng bộ tài liệu cài đặt/nâng cấp
 
 ### Agents
 

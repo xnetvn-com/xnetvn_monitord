@@ -308,6 +308,11 @@ Notable repository-specific customizations:
 - `xnetvn_monitord-github-workflows.instructions.md`
 - `sync-monitor-docs.prompt.md`
 - `release-readiness.prompt.md`
+- `review-ops-change.prompt.md`
+- `prepare-release-notes.prompt.md`
+- `prepare-release-tag.prompt.md`
+- `publish-release-via-tag.prompt.md`
+- `sync-installation-docs.prompt.md`
 - `ops-safety-review.agent.md`
 - `release-readiness-review.agent.md`
 
