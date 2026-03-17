@@ -66,7 +66,7 @@ sudo bash scripts/install.sh --releases=latest
 Cài từ một tag phát hành cụ thể:
 
 ```
-sudo bash scripts/install.sh --releases=v1.2.1
+sudo bash scripts/install.sh --releases=v1.2.2
 ```
 
 Sau khi cài đặt, chỉnh sửa cấu hình:
