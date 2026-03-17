@@ -34,9 +34,9 @@ def test_should_send_ready_and_status_messages(mocker, monkeypatch) -> None:
 
     notifier = SystemdNotifier()
 
-    assert notifier.send_ready("Running version 1.2.2") is True
+    assert notifier.send_ready("Running version 1.2.3") is True
     socket_factory.assert_called_once()
     socket_instance.sendto.assert_called_once_with(
-        b"READY=1\nSTATUS=Running version 1.2.2",
+        b"READY=1\nSTATUS=Running version 1.2.3",
         "\0xnetvn-notify",
     )
