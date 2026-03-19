@@ -66,7 +66,7 @@ sudo bash scripts/install.sh --releases=latest
 Install from a specific published release tag:
 
 ```
-sudo bash scripts/install.sh --releases=v1.2.3
+sudo bash scripts/install.sh --releases=v1.2.4
 ```
 
 After installation, edit the configuration:
