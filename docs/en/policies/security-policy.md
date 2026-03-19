@@ -38,4 +38,4 @@ from misconfiguration.
 
 ## 5. Security scanning
 
-- Use `bandit` and `safety` in the CI/CD pipeline.
+- Use `bandit` and `pip-audit` in the CI/CD pipeline.

@@ -234,6 +234,5 @@ class DiscordNotifier:
     def _split_content(content: str) -> list[str]:
         """Split a Discord content string into API-sized chunks."""
         return [
-            content[index : index + DISCORD_CONTENT_LIMIT]
-            for index in range(0, len(content), DISCORD_CONTENT_LIMIT)
+            content[index : index + DISCORD_CONTENT_LIMIT] for index in range(0, len(content), DISCORD_CONTENT_LIMIT)
         ]
