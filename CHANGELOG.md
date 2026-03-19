@@ -6,6 +6,12 @@ This format follows Keep a Changelog and uses Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.2.5] - 2026-03-19
+
+### Changed
+
+- Release: bump package to v1.2.5 and include minor notifier fix.
+
 
 ## [1.2.4] - 2026-03-19
 
