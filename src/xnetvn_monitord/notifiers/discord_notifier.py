@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 
 DISCORD_WEBHOOK_USER_AGENT = "xnetvn_monitord/1.0"
 DISCORD_CONTENT_LIMIT = 2000
+SPLITTABLE_DISCORD_PAYLOAD_KEYS = frozenset({"content", "username", "avatar_url"})
 
 
 class DiscordNotifier:
@@ -124,23 +125,7 @@ class DiscordNotifier:
                 logger.error("Discord webhook URL has invalid scheme: %s", target_label)
                 return False
 
-            discord_payload = dict(payload)
-            content = discord_payload.get("content")
-            if isinstance(content, str) and len(content) > DISCORD_CONTENT_LIMIT:
-                logger.warning(
-                    "Discord content exceeded %s characters; truncating target=%s original_length=%s",
-                    DISCORD_CONTENT_LIMIT,
-                    target_label,
-                    len(content),
-                )
-                discord_payload["content"] = content[: DISCORD_CONTENT_LIMIT - len("...")] + "..."
-
-            data = json.dumps(discord_payload).encode("utf-8")
-            headers = {
-                "Content-Type": "application/json",
-                "User-Agent": DISCORD_WEBHOOK_USER_AGENT,
-            }
-            request = urllib.request.Request(self.webhook_url, data=data, headers=headers, method="POST")
+            discord_payloads = self._prepare_payloads(payload, target_label)
 
             ssl_context = None
             if not self.verify_ssl:
@@ -149,25 +134,35 @@ class DiscordNotifier:
                 ssl_context.check_hostname = False
                 ssl_context.verify_mode = ssl.CERT_NONE
 
-            with open_url(
-                request,
-                self.timeout,
-                ssl_context,
-                self.proxy_config,
-                self.only_ipv4,
-            ) as response:  # nosec B310
-                status_code = getattr(response, "status", response.getcode())
-                if 200 <= status_code < 300:
-                    logger.debug("Discord notification sent successfully")
-                    return True
+            for discord_payload in discord_payloads:
+                data = json.dumps(discord_payload).encode("utf-8")
+                headers = {
+                    "Content-Type": "application/json",
+                    "User-Agent": DISCORD_WEBHOOK_USER_AGENT,
+                }
+                request = urllib.request.Request(self.webhook_url, data=data, headers=headers, method="POST")
 
-                logger.error(
-                    "Discord webhook request failed target=%s status=%s response=%s",
-                    target_label,
-                    status_code,
-                    read_response_preview(response) or "<empty>",
-                )
-                return False
+                with open_url(
+                    request,
+                    self.timeout,
+                    ssl_context,
+                    self.proxy_config,
+                    self.only_ipv4,
+                ) as response:  # nosec B310
+                    status_code = getattr(response, "status", response.getcode())
+                    if 200 <= status_code < 300:
+                        continue
+
+                    logger.error(
+                        "Discord webhook request failed target=%s status=%s response=%s",
+                        target_label,
+                        status_code,
+                        read_response_preview(response) or "<empty>",
+                    )
+                    return False
+
+            logger.debug("Discord notification sent successfully")
+            return True
 
         except urllib.error.HTTPError as exc:
             logger.error(
@@ -199,3 +194,46 @@ class DiscordNotifier:
                 exc_info=True,
             )
             return False
+
+    def _prepare_payloads(self, payload: Dict, target_label: str) -> list[Dict]:
+        """Prepare one or more Discord payloads for delivery.
+
+        Args:
+            payload: Original payload.
+            target_label: Redacted target label for logging.
+
+        Returns:
+            A list of payloads ready to send.
+        """
+        discord_payload = dict(payload)
+        content = discord_payload.get("content")
+        if not isinstance(content, str) or len(content) <= DISCORD_CONTENT_LIMIT:
+            return [discord_payload]
+
+        if set(discord_payload).issubset(SPLITTABLE_DISCORD_PAYLOAD_KEYS):
+            chunks = self._split_content(content)
+            logger.debug(
+                "Discord content exceeded %s characters; splitting target=%s original_length=%s chunks=%s",
+                DISCORD_CONTENT_LIMIT,
+                target_label,
+                len(content),
+                len(chunks),
+            )
+            return [{**discord_payload, "content": chunk} for chunk in chunks]
+
+        logger.warning(
+            "Discord content exceeded %s characters; truncating target=%s original_length=%s",
+            DISCORD_CONTENT_LIMIT,
+            target_label,
+            len(content),
+        )
+        discord_payload["content"] = content[: DISCORD_CONTENT_LIMIT - len("...")] + "..."
+        return [discord_payload]
+
+    @staticmethod
+    def _split_content(content: str) -> list[str]:
+        """Split a Discord content string into API-sized chunks."""
+        return [
+            content[index : index + DISCORD_CONTENT_LIMIT]
+            for index in range(0, len(content), DISCORD_CONTENT_LIMIT)
+        ]

@@ -100,23 +100,25 @@ class TestDiscordNotifier:
         request = open_url_mock.call_args.args[0]
         assert request.get_header("User-agent") == "xnetvn_monitord/1.0"
 
-    def test_should_truncate_content_to_discord_limit(self, mocker):
-        """Test Discord content is capped at the API limit."""
+    def test_should_split_plain_text_content_across_multiple_requests(self, mocker, caplog):
+        """Test long plain-text Discord messages are split without losing content."""
         open_url_mock = mocker.patch(
             "xnetvn_monitord.notifiers.discord_notifier.open_url",
             return_value=DummyResponse(),
         )
+        caplog.set_level(logging.WARNING)
 
         notifier = DiscordNotifier({"enabled": True, "webhook_url": "https://example.com"})
 
-        long_message = "a" * 2001
+        long_message = "a" * 3567
 
         assert notifier.send_notification(long_message) is True
-        request = open_url_mock.call_args.args[0]
-        payload = json.loads(request.data.decode("utf-8"))
-        assert len(payload["content"]) == 2000
-        assert payload["content"].endswith("...")
-        assert payload["content"] != long_message
+        assert open_url_mock.call_count == 2
+
+        payloads = [json.loads(call.args[0].data.decode("utf-8")) for call in open_url_mock.call_args_list]
+        assert "".join(payload["content"] for payload in payloads) == long_message
+        assert all(len(payload["content"]) <= 2000 for payload in payloads)
+        assert "truncating" not in caplog.text
 
     def test_should_return_false_on_non_2xx_status(self, mocker):
         """Test non-2xx response returns False."""
