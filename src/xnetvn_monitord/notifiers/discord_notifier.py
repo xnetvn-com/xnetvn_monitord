@@ -37,6 +37,7 @@ from xnetvn_monitord.utils.network import (
 logger = logging.getLogger(__name__)
 
 DISCORD_WEBHOOK_USER_AGENT = "xnetvn_monitord/1.0"
+DISCORD_CONTENT_LIMIT = 2000
 
 
 class DiscordNotifier:
@@ -123,7 +124,18 @@ class DiscordNotifier:
                 logger.error("Discord webhook URL has invalid scheme: %s", target_label)
                 return False
 
-            data = json.dumps(payload).encode("utf-8")
+            discord_payload = dict(payload)
+            content = discord_payload.get("content")
+            if isinstance(content, str) and len(content) > DISCORD_CONTENT_LIMIT:
+                logger.warning(
+                    "Discord content exceeded %s characters; truncating target=%s original_length=%s",
+                    DISCORD_CONTENT_LIMIT,
+                    target_label,
+                    len(content),
+                )
+                discord_payload["content"] = content[: DISCORD_CONTENT_LIMIT - 9] + "..."
+
+            data = json.dumps(discord_payload).encode("utf-8")
             headers = {
                 "Content-Type": "application/json",
                 "User-Agent": DISCORD_WEBHOOK_USER_AGENT,

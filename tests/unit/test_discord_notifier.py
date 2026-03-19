@@ -14,6 +14,7 @@
 
 """Unit tests for DiscordNotifier."""
 
+import json
 import logging
 import ssl
 from urllib.error import URLError
@@ -98,6 +99,23 @@ class TestDiscordNotifier:
         assert notifier.send_notification("test") is True
         request = open_url_mock.call_args.args[0]
         assert request.get_header("User-agent") == "xnetvn_monitord/1.0"
+
+    def test_should_truncate_content_to_discord_limit(self, mocker):
+        """Test Discord content is capped at the API limit."""
+        open_url_mock = mocker.patch(
+            "xnetvn_monitord.notifiers.discord_notifier.open_url",
+            return_value=DummyResponse(),
+        )
+
+        notifier = DiscordNotifier({"enabled": True, "webhook_url": "https://example.com"})
+
+        long_message = "a" * 2001
+
+        assert notifier.send_notification(long_message) is True
+        request = open_url_mock.call_args.args[0]
+        payload = json.loads(request.data.decode("utf-8"))
+        assert len(payload["content"]) == 2000
+        assert payload["content"] != long_message
 
     def test_should_return_false_on_non_2xx_status(self, mocker):
         """Test non-2xx response returns False."""
