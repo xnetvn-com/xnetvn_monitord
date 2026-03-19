@@ -133,7 +133,7 @@ class DiscordNotifier:
                     target_label,
                     len(content),
                 )
-                discord_payload["content"] = content[: DISCORD_CONTENT_LIMIT - 9] + "..."
+                discord_payload["content"] = content[: DISCORD_CONTENT_LIMIT - len("...")] + "..."
 
             data = json.dumps(discord_payload).encode("utf-8")
             headers = {

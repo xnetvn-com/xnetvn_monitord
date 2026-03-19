@@ -115,6 +115,7 @@ class TestDiscordNotifier:
         request = open_url_mock.call_args.args[0]
         payload = json.loads(request.data.decode("utf-8"))
         assert len(payload["content"]) == 2000
+        assert payload["content"].endswith("...")
         assert payload["content"] != long_message
 
     def test_should_return_false_on_non_2xx_status(self, mocker):
