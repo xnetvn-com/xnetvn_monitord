@@ -77,6 +77,7 @@ jobs:
       contents: read            # for actions/checkout to fetch code
       security-events: write    # for redhat-actions/crda to upload SARIF results
       issues: write             # for redhat-actions/crda to read/create PR labels via Issues API
+      pull-requests: write      # for redhat-actions/crda to apply scan status labels to pull requests
     name: Scan project vulnerabilities with CRDA
     runs-on: ubuntu-latest
     steps:
