@@ -23,16 +23,15 @@ Tất cả các thay đổi quan trọng của dự án sẽ được ghi ở đ
 
 ### Added
 
-- Cập nhật tài liệu tiếng Việt (README, index, kiến trúc, cấu hình, cài đặt).
+- Chưa có.
 
 ### Changed
 
-- Chưa có.
+- Báo cáo notification giờ kèm chẩn đoán an toàn top 5 tiến trình cho CPU %, CPU core load, RAM, disk I/O và network theo tiến trình ở chế độ best-effort khi kênh bật `include_system_stats`.
 
 ### Fixed
 
-- Sua loi nhan dien phien ban trong script update va lam moi updater tai
-	/opt/xnetvn_monitord/scripts.
+- Chẩn đoán tiến trình chỉ gửi executable name, user và PID, đồng thời ghi rõ khi metric network theo tiến trình không khả dụng do thiếu collector tùy chọn, thiếu quyền hoặc output không hợp lệ.
 
 ## [1.0.0] - 2026-01-31
 

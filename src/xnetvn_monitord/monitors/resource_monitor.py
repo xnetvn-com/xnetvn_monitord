@@ -21,6 +21,7 @@ recovery actions when thresholds are exceeded.
 import logging
 import os
 import shlex
+import shutil
 import subprocess
 import time
 from typing import Any, Dict, List, Optional
@@ -45,6 +46,8 @@ class ResourceMonitor:
         self.enabled = config.get("enabled", True)
         self.last_action_time: Dict[str, float] = {}
         self.service_manager = service_manager or ServiceManager()
+        self._process_disk_baseline: Dict[int, Dict[str, float]] = {}
+        self._prime_process_counters()
 
     def check_resources(self) -> Dict:
         """Check all configured resources.
@@ -539,6 +542,249 @@ class ResourceMonitor:
 
         return command_success is not False
 
+    def _prime_process_counters(self) -> None:
+        """Prime process-level counters so later snapshots can compute deltas."""
+        current_time = time.time()
+
+        try:
+            for proc in psutil.process_iter(["pid"]):
+                try:
+                    proc.cpu_percent(interval=None)
+                    io_counters = proc.io_counters()
+                    if io_counters is None:
+                        continue
+                    self._process_disk_baseline[proc.pid] = {
+                        "timestamp": current_time,
+                        "read_bytes": float(io_counters.read_bytes),
+                        "write_bytes": float(io_counters.write_bytes),
+                    }
+                except (psutil.Error, OSError, PermissionError, ValueError):
+                    continue
+        except Exception as e:
+            logger.debug("Failed to prime process counters: %s", str(e))
+
+    def _collect_top_process_stats(self) -> Dict[str, Any]:
+        """Collect ranked process snapshots for diagnostics in notifications."""
+        snapshots = self._collect_process_snapshots()
+
+        return {
+            "cpu_percent": self._build_ranked_process_list(
+                snapshots,
+                "cpu_percent",
+                ["user", "pid", "command", "cpu_percent", "cpu_core_load"],
+            ),
+            "cpu_load": self._build_ranked_process_list(
+                snapshots,
+                "cpu_core_load",
+                ["user", "pid", "command", "cpu_core_load", "cpu_percent"],
+            ),
+            "memory": self._build_ranked_process_list(
+                snapshots,
+                "memory_mb",
+                ["user", "pid", "command", "memory_mb", "memory_percent"],
+            ),
+            "disk_io": self._build_ranked_process_list(
+                snapshots,
+                "total_disk_io_mb_per_sec",
+                [
+                    "user",
+                    "pid",
+                    "command",
+                    "read_mb_per_sec",
+                    "write_mb_per_sec",
+                    "total_disk_io_mb_per_sec",
+                ],
+            ),
+            "network": self._collect_top_network_processes(),
+        }
+
+    def _collect_process_snapshots(self) -> List[Dict[str, Any]]:
+        """Collect per-process CPU, memory, and disk I/O snapshots."""
+        snapshots: List[Dict[str, Any]] = []
+        current_time = time.time()
+        active_pids = set()
+
+        for proc in psutil.process_iter(["pid", "name", "username"]):
+            try:
+                with proc.oneshot():
+                    pid = proc.info.get("pid", proc.pid)
+                    if not isinstance(pid, int):
+                        continue
+                    active_pids.add(pid)
+
+                    command = self._sanitize_process_name(proc.info.get("name") or proc.name())
+                    user = str(proc.info.get("username") or "unknown")
+                    cpu_percent = max(float(proc.cpu_percent(interval=None)), 0.0)
+                    memory_info = proc.memory_info()
+                    memory_mb = max(float(memory_info.rss) / (1024 * 1024), 0.0)
+                    memory_percent = max(float(proc.memory_percent()), 0.0)
+
+                disk_metrics = self._calculate_process_disk_io(proc, current_time)
+            except (psutil.Error, OSError, PermissionError, ValueError):
+                continue
+
+            snapshots.append(
+                {
+                    "user": user,
+                    "pid": pid,
+                    "command": command,
+                    "cpu_percent": cpu_percent,
+                    "cpu_core_load": cpu_percent / 100.0,
+                    "memory_mb": memory_mb,
+                    "memory_percent": memory_percent,
+                    **disk_metrics,
+                }
+            )
+
+        self._process_disk_baseline = {
+            pid: sample for pid, sample in self._process_disk_baseline.items() if pid in active_pids
+        }
+
+        return snapshots
+
+    def _calculate_process_disk_io(self, proc: psutil.Process, current_time: float) -> Dict[str, float]:
+        """Calculate per-process disk I/O throughput in MB/s using sampled deltas."""
+        metrics = {
+            "read_mb_per_sec": 0.0,
+            "write_mb_per_sec": 0.0,
+            "total_disk_io_mb_per_sec": 0.0,
+        }
+
+        try:
+            io_counters = proc.io_counters()
+        except (psutil.Error, OSError, PermissionError, ValueError, AttributeError):
+            return metrics
+
+        if io_counters is None:
+            return metrics
+
+        baseline = self._process_disk_baseline.get(proc.pid)
+        self._process_disk_baseline[proc.pid] = {
+            "timestamp": current_time,
+            "read_bytes": float(io_counters.read_bytes),
+            "write_bytes": float(io_counters.write_bytes),
+        }
+
+        if not baseline:
+            return metrics
+
+        elapsed = max(current_time - float(baseline.get("timestamp", current_time)), 0.001)
+        read_delta = max(float(io_counters.read_bytes) - float(baseline.get("read_bytes", 0.0)), 0.0)
+        write_delta = max(float(io_counters.write_bytes) - float(baseline.get("write_bytes", 0.0)), 0.0)
+
+        metrics["read_mb_per_sec"] = read_delta / (1024 * 1024) / elapsed
+        metrics["write_mb_per_sec"] = write_delta / (1024 * 1024) / elapsed
+        metrics["total_disk_io_mb_per_sec"] = metrics["read_mb_per_sec"] + metrics["write_mb_per_sec"]
+        return metrics
+
+    def _build_ranked_process_list(
+        self,
+        snapshots: List[Dict[str, Any]],
+        sort_key: str,
+        fields: List[str],
+        limit: int = 5,
+    ) -> List[Dict[str, Any]]:
+        """Build a top-N ranking from collected process snapshots."""
+        ranked = sorted(
+            snapshots,
+            key=lambda item: (float(item.get(sort_key, 0.0)), float(item.get("memory_percent", 0.0))),
+            reverse=True,
+        )
+
+        process_list: List[Dict[str, Any]] = []
+        for snapshot in ranked[:limit]:
+            process_list.append({field: snapshot.get(field) for field in fields if field in snapshot})
+
+        return process_list
+
+    def _collect_top_network_processes(self) -> Dict[str, Any]:
+        """Collect per-process network throughput when an optional collector is available."""
+        unavailable = {
+            "available": False,
+            "reason": "Process-level network throughput is unavailable without an optional collector.",
+            "top": [],
+        }
+        collector_path = shutil.which("nethogs")
+
+        if not collector_path:
+            return unavailable
+
+        if hasattr(os, "geteuid") and os.geteuid() != 0:
+            return unavailable
+
+        try:
+            result = subprocess.run(
+                [collector_path, "-t", "-c", "1"],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+        except (subprocess.TimeoutExpired, OSError, ValueError) as e:
+            logger.warning("Failed to collect per-process network throughput: %s", str(e))
+            return unavailable
+
+        process_entries: List[Dict[str, Any]] = []
+        for line in result.stdout.splitlines():
+            entry = self._parse_nethogs_process_line(line)
+            if entry:
+                process_entries.append(entry)
+
+        if not process_entries:
+            return unavailable
+
+        return {
+            "available": True,
+            "reason": "",
+            "top": sorted(process_entries, key=lambda item: float(item.get("total_mbps", 0.0)), reverse=True)[:5],
+        }
+
+    def _parse_nethogs_process_line(self, line: str) -> Optional[Dict[str, Any]]:
+        """Parse a nethogs text-mode line into a process throughput entry."""
+        parts = [part.strip() for part in line.split("\t") if part.strip()]
+        if len(parts) < 3:
+            return None
+
+        identifier = parts[0]
+        try:
+            sent_kbytes_per_sec = float(parts[1])
+            recv_kbytes_per_sec = float(parts[2])
+        except ValueError:
+            return None
+
+        command = identifier
+        user = "unknown"
+        pid = 0
+        identifier_parts = identifier.rsplit("/", 2)
+        if len(identifier_parts) == 3:
+            command, pid_value, user = identifier_parts
+            try:
+                pid = int(pid_value)
+            except ValueError:
+                pid = 0
+        elif len(identifier_parts) == 2:
+            command, pid_value = identifier_parts
+            try:
+                pid = int(pid_value)
+            except ValueError:
+                pid = 0
+
+        sent_mbps = (sent_kbytes_per_sec * 8.0) / 1000.0
+        recv_mbps = (recv_kbytes_per_sec * 8.0) / 1000.0
+        return {
+            "user": user or "unknown",
+            "pid": pid,
+            "command": self._sanitize_process_name(command),
+            "sent_mbps": sent_mbps,
+            "recv_mbps": recv_mbps,
+            "total_mbps": sent_mbps + recv_mbps,
+        }
+
+    @staticmethod
+    def _sanitize_process_name(command: Any) -> str:
+        """Return a safe process display name without exposing full command lines."""
+        sanitized = os.path.basename(str(command or "").strip())
+        return sanitized or "unknown"
+
     def get_current_stats(self) -> Dict:
         """Get current system resource statistics without threshold checks.
 
@@ -551,6 +797,7 @@ class ResourceMonitor:
             "memory": {},
             "disk": {},
             "network": {},
+            "top_processes": {},
         }
 
         try:
@@ -613,6 +860,8 @@ class ResourceMonitor:
                     "dropin": counters.dropin,
                     "dropout": counters.dropout,
                 }
+
+            stats["top_processes"] = self._collect_top_process_stats()
 
         except Exception as e:
             logger.error(f"Error getting resource stats: {str(e)}")

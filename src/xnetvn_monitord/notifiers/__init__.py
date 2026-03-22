@@ -18,12 +18,13 @@ This module provides a unified interface for managing multiple notification chan
 """
 
 import copy
+import html
 import logging
 import re
 import socket
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from .discord_notifier import DiscordNotifier
 from .email_notifier import EmailNotifier
@@ -573,6 +574,10 @@ class NotificationManager:
 
         lines = ["\nSystem Stats:"] if include_header else []
         for key, value in system_stats.items():
+            if key == "top_processes" and isinstance(value, dict):
+                lines.extend(self._format_top_processes_plain(value))
+                continue
+
             if key == "memory":
                 label = "RAM"
             elif key == "cpu":
@@ -595,6 +600,10 @@ class NotificationManager:
 
         sections = ["<h3>System Stats</h3>"] if include_header else []
         for key, value in system_stats.items():
+            if key == "top_processes" and isinstance(value, dict):
+                sections.extend(self._format_top_processes_html(value))
+                continue
+
             if key == "memory":
                 label = "RAM"
             elif key == "cpu":
@@ -609,6 +618,185 @@ class NotificationManager:
             else:
                 sections.append(f"<pre>{self._format_display_value(value)}</pre>")
         return sections
+
+    def _format_top_processes_plain(self, top_processes: Dict[str, Any]) -> List[str]:
+        """Format ranked process snapshots for plain text reports."""
+        lines: List[str] = []
+        lines.extend(
+            self._format_top_process_section_plain(
+                "Top Processes by CPU %:",
+                top_processes.get("cpu_percent", []),
+                [("USER", "user"), ("PID", "pid"), ("COMMAND", "command"), ("CPU %", "cpu_percent")],
+            )
+        )
+        lines.extend(
+            self._format_top_process_section_plain(
+                "Top Processes by CPU Load (cores):",
+                top_processes.get("cpu_load", []),
+                [("USER", "user"), ("PID", "pid"), ("COMMAND", "command"), ("CPU Load", "cpu_core_load")],
+            )
+        )
+        lines.extend(
+            self._format_top_process_section_plain(
+                "Top Processes by Memory:",
+                top_processes.get("memory", []),
+                [
+                    ("USER", "user"),
+                    ("PID", "pid"),
+                    ("COMMAND", "command"),
+                    ("RAM MB", "memory_mb"),
+                    ("RAM %", "memory_percent"),
+                ],
+            )
+        )
+        lines.extend(
+            self._format_top_process_section_plain(
+                "Top Processes by Disk I/O:",
+                top_processes.get("disk_io", []),
+                [
+                    ("USER", "user"),
+                    ("PID", "pid"),
+                    ("COMMAND", "command"),
+                    ("READ MB/s", "read_mb_per_sec"),
+                    ("WRITE MB/s", "write_mb_per_sec"),
+                    ("TOTAL MB/s", "total_disk_io_mb_per_sec"),
+                ],
+            )
+        )
+
+        network_stats = top_processes.get("network", {})
+        lines.append("\nTop Processes by Network:")
+        if isinstance(network_stats, dict) and not network_stats.get("available", True):
+            lines.append(str(network_stats.get("reason") or "No process data available."))
+        else:
+            network_entries = network_stats.get("top", []) if isinstance(network_stats, dict) else []
+            lines.extend(
+                self._format_top_process_entries_plain(
+                    network_entries,
+                    [
+                        ("USER", "user"),
+                        ("PID", "pid"),
+                        ("COMMAND", "command"),
+                        ("TX Mbps", "sent_mbps"),
+                        ("RX Mbps", "recv_mbps"),
+                        ("TOTAL Mbps", "total_mbps"),
+                    ],
+                )
+            )
+
+        return lines
+
+    def _format_top_process_section_plain(
+        self,
+        title: str,
+        entries: Any,
+        field_map: List[Tuple[str, str]],
+    ) -> List[str]:
+        """Format a single ranked process section for plain text output."""
+        lines = [f"\n{title}"]
+        lines.extend(self._format_top_process_entries_plain(entries, field_map))
+        return lines
+
+    def _format_top_process_entries_plain(self, entries: Any, field_map: List[Tuple[str, str]]) -> List[str]:
+        """Format process entries into single-line plain text rows."""
+        if not isinstance(entries, list) or not entries:
+            return ["No process data available."]
+
+        formatted_lines: List[str] = []
+        for entry in entries[:5]:
+            if not isinstance(entry, dict):
+                continue
+            parts = []
+            for label, key in field_map:
+                value = entry.get(key)
+                if value in (None, ""):
+                    continue
+                parts.append(f"{label}: {self._format_display_value(value)}")
+            if parts:
+                formatted_lines.append(" | ".join(parts))
+
+        return formatted_lines or ["No process data available."]
+
+    def _format_top_processes_html(self, top_processes: Dict[str, Any]) -> List[str]:
+        """Format ranked process snapshots for HTML reports."""
+        sections: List[str] = []
+        sections.extend(
+            self._format_top_process_section_html(
+                "Top Processes by CPU %",
+                top_processes.get("cpu_percent", []),
+                [("USER", "user"), ("PID", "pid"), ("COMMAND", "command"), ("CPU %", "cpu_percent")],
+            )
+        )
+        sections.extend(
+            self._format_top_process_section_html(
+                "Top Processes by CPU Load (cores)",
+                top_processes.get("cpu_load", []),
+                [("USER", "user"), ("PID", "pid"), ("COMMAND", "command"), ("CPU Load", "cpu_core_load")],
+            )
+        )
+        sections.extend(
+            self._format_top_process_section_html(
+                "Top Processes by Memory",
+                top_processes.get("memory", []),
+                [
+                    ("USER", "user"),
+                    ("PID", "pid"),
+                    ("COMMAND", "command"),
+                    ("RAM MB", "memory_mb"),
+                    ("RAM %", "memory_percent"),
+                ],
+            )
+        )
+        sections.extend(
+            self._format_top_process_section_html(
+                "Top Processes by Disk I/O",
+                top_processes.get("disk_io", []),
+                [
+                    ("USER", "user"),
+                    ("PID", "pid"),
+                    ("COMMAND", "command"),
+                    ("READ MB/s", "read_mb_per_sec"),
+                    ("WRITE MB/s", "write_mb_per_sec"),
+                    ("TOTAL MB/s", "total_disk_io_mb_per_sec"),
+                ],
+            )
+        )
+
+        network_stats = top_processes.get("network", {})
+        sections.append("<h4>Top Processes by Network</h4>")
+        if isinstance(network_stats, dict) and not network_stats.get("available", True):
+            sections.append(
+                f"<pre>{html.escape(str(network_stats.get('reason') or 'No process data available.'))}</pre>"
+            )
+        else:
+            network_entries = network_stats.get("top", []) if isinstance(network_stats, dict) else []
+            network_field_map: List[Tuple[str, str]] = [
+                ("USER", "user"),
+                ("PID", "pid"),
+                ("COMMAND", "command"),
+                ("TX Mbps", "sent_mbps"),
+                ("RX Mbps", "recv_mbps"),
+                ("TOTAL Mbps", "total_mbps"),
+            ]
+            sections.append(
+                f"<pre>{html.escape(self._join_top_process_entries(network_entries, network_field_map))}</pre>"
+            )
+
+        return sections
+
+    def _format_top_process_section_html(
+        self,
+        title: str,
+        entries: Any,
+        field_map: List[Tuple[str, str]],
+    ) -> List[str]:
+        """Format a single ranked process section for HTML output."""
+        content = self._join_top_process_entries(entries, field_map)
+        return [f"<h4>{html.escape(title)}</h4>", f"<pre>{html.escape(content)}</pre>"]
+
+    def _join_top_process_entries(self, entries: Any, field_map: List[Tuple[str, str]]) -> str:
+        """Join process entries into newline-separated rows for HTML blocks."""
+        return "\n".join(self._format_top_process_entries_plain(entries, field_map))
 
     def _format_timestamp(self, timestamp: Optional[float]) -> str:
         """Format a timestamp for reporting.
@@ -778,20 +966,24 @@ class NotificationManager:
         return filtered_content
 
     def _filter_dict_content(self, data: Dict[str, Any]) -> Any:
-        """Recursively filter sensitive information from dictionary.
+        """Recursively filter sensitive information from dictionaries and lists."""
+        if isinstance(data, list):
+            filtered_items = []
+            for item in data:
+                if isinstance(item, (dict, list)):
+                    filtered_items.append(self._filter_dict_content(item))
+                elif isinstance(item, str):
+                    filtered_items.append(self._filter_sensitive_content(item))
+                else:
+                    filtered_items.append(item)
+            return filtered_items
 
-        Args:
-            data: Dictionary to filter.
-
-        Returns:
-            Filtered dictionary.
-        """
         if not isinstance(data, dict):
             return data
 
         filtered = {}
         for key, value in data.items():
-            if isinstance(value, dict):
+            if isinstance(value, (dict, list)):
                 filtered[key] = self._filter_dict_content(value)
             elif isinstance(value, str):
                 filtered[key] = self._filter_sensitive_content(value)

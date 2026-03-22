@@ -750,6 +750,59 @@ class TestResourceMonitorIntegration:
 
         assert stats["disk"]["mount_points"] == []
 
+    def test_should_include_top_process_snapshots_in_current_stats(self, mocker):
+        """Test get_current_stats includes top process snapshots for notifications."""
+        mocker.patch("os.getloadavg", return_value=(1.0, 2.0, 3.0))
+        mocker.patch("psutil.cpu_percent", return_value=10.0)
+
+        mock_mem = mocker.MagicMock()
+        mock_mem.total = 8 * 1024 * 1024 * 1024
+        mock_mem.available = 2 * 1024 * 1024 * 1024
+        mock_mem.used = 6 * 1024 * 1024 * 1024
+        mock_mem.percent = 75.0
+        mocker.patch("psutil.virtual_memory", return_value=mock_mem)
+
+        mocker.patch("os.path.exists", return_value=True)
+
+        mock_usage = mocker.MagicMock()
+        mock_usage.total = 100 * 1024**3
+        mock_usage.used = 60 * 1024**3
+        mock_usage.free = 40 * 1024**3
+        mock_usage.percent = 60.0
+        mocker.patch("psutil.disk_usage", return_value=mock_usage)
+
+        mock_net = mocker.MagicMock()
+        mock_net.bytes_sent = 100
+        mock_net.bytes_recv = 200
+        mock_net.packets_sent = 1
+        mock_net.packets_recv = 2
+        mock_net.errin = 0
+        mock_net.errout = 0
+        mock_net.dropin = 0
+        mock_net.dropout = 0
+        mocker.patch("psutil.net_io_counters", side_effect=[mock_net, {"eth0": mock_net}])
+
+        top_processes = {
+            "cpu_percent": [{"user": "www-data", "pid": 101, "command": "php-fpm", "cpu_percent": 99.5}],
+            "cpu_load": [{"user": "root", "pid": 202, "command": "python3", "cpu_core_load": 1.75}],
+            "memory": [{"user": "mysql", "pid": 303, "command": "mysqld", "memory_mb": 2048.0, "memory_percent": 25.0}],
+            "disk_io": [
+                {"user": "root", "pid": 404, "command": "rsync", "read_mb_per_sec": 10.5, "write_mb_per_sec": 2.5}
+            ],
+            "network": {
+                "available": False,
+                "reason": "Process-level network throughput is unavailable without an optional collector.",
+                "top": [],
+            },
+        }
+
+        monitor = ResourceMonitor({"disk": {"mount_points": [{"path": "/"}]}})
+        mocker.patch.object(monitor, "_collect_top_process_stats", return_value=top_processes, create=True)
+
+        stats = monitor.get_current_stats()
+
+        assert stats["top_processes"] == top_processes
+
 
 class TestResourceMonitorAdditionalCoverage:
     """Additional tests to cover missing branches."""
@@ -853,6 +906,117 @@ class TestResourceMonitorAdditionalCoverage:
         monitor.last_action_time["high_cpu"] = time.time() - 5
 
         assert monitor._check_action_cooldown("high_cpu") is True
+
+    def test_should_parse_nethogs_output_with_sanitized_command(self):
+        """Test nethogs lines are parsed into safe process summaries."""
+        monitor = ResourceMonitor({"enabled": True})
+
+        entry = monitor._parse_nethogs_process_line("/usr/sbin/nginx/123/www-data\t10.0\t20.0")
+
+        assert entry == {
+            "user": "www-data",
+            "pid": 123,
+            "command": "nginx",
+            "sent_mbps": 0.08,
+            "recv_mbps": 0.16,
+            "total_mbps": 0.24,
+        }
+
+    def test_should_mark_network_process_stats_unavailable_without_collector(self, mocker):
+        """Test network process stats return an explicit fallback when collector is missing."""
+        monitor = ResourceMonitor({"enabled": True})
+        mocker.patch("shutil.which", return_value=None)
+
+        result = monitor._collect_top_network_processes()
+
+        assert result["available"] is False
+        assert "optional collector" in result["reason"]
+        assert result["top"] == []
+
+    def test_should_mark_network_process_stats_unavailable_without_required_privileges(self, mocker):
+        """Test network process stats return a safe fallback when privileges are insufficient."""
+        monitor = ResourceMonitor({"enabled": True})
+        mocker.patch("shutil.which", return_value="/usr/sbin/nethogs")
+        mocker.patch("os.geteuid", return_value=1000)
+
+        result = monitor._collect_top_network_processes()
+
+        assert result["available"] is False
+        assert "optional collector" in result["reason"]
+        assert result["top"] == []
+
+    def test_should_collect_top_network_processes_from_optional_collector(self, mocker):
+        """Test network process stats are ranked from optional collector output when available."""
+        monitor = ResourceMonitor({"enabled": True})
+        mocker.patch("shutil.which", return_value="/usr/sbin/nethogs")
+        mocker.patch("os.geteuid", return_value=0)
+        mocker.patch(
+            "subprocess.run",
+            return_value=mocker.MagicMock(
+                stdout="/usr/bin/python3/321/root\t100.0\t50.0\n/usr/sbin/nginx/123/www-data\t20.0\t30.0\n"
+            ),
+        )
+
+        result = monitor._collect_top_network_processes()
+
+        assert result["available"] is True
+        assert result["reason"] == ""
+        assert [entry["command"] for entry in result["top"]] == ["python3", "nginx"]
+        assert result["top"][0]["pid"] == 321
+        assert abs(result["top"][0]["total_mbps"] - 1.2) < 1e-9
+
+    def test_should_ignore_malformed_nethogs_lines(self):
+        """Test malformed nethogs lines are ignored safely."""
+        monitor = ResourceMonitor({"enabled": True})
+
+        assert monitor._parse_nethogs_process_line("Refreshing:") is None
+        assert monitor._parse_nethogs_process_line("python3/123/root\tnot-a-number\t20.0") is None
+        assert monitor._parse_nethogs_process_line("python3/123/root\t10.0") is None
+
+    def test_should_return_unavailable_when_collector_output_has_no_valid_rows(self, mocker):
+        """Test collector output without valid process rows falls back to unavailable."""
+        monitor = ResourceMonitor({"enabled": True})
+        mocker.patch("shutil.which", return_value="/usr/sbin/nethogs")
+        mocker.patch("os.geteuid", return_value=0)
+        mocker.patch(
+            "subprocess.run",
+            return_value=mocker.MagicMock(stdout="Refreshing:\ninvalid-line\npython3/123/root\tbad\tdata\n"),
+        )
+
+        result = monitor._collect_top_network_processes()
+
+        assert result["available"] is False
+        assert "optional collector" in result["reason"]
+        assert result["top"] == []
+
+    def test_should_return_unavailable_when_network_collector_times_out(self, mocker):
+        """Test collector timeouts fall back to unavailable network process stats."""
+        monitor = ResourceMonitor({"enabled": True})
+        mocker.patch("shutil.which", return_value="/usr/sbin/nethogs")
+        mocker.patch("os.geteuid", return_value=0)
+        mocker.patch(
+            "subprocess.run",
+            side_effect=subprocess.TimeoutExpired(cmd="/usr/sbin/nethogs", timeout=15),
+        )
+
+        result = monitor._collect_top_network_processes()
+
+        assert result["available"] is False
+        assert "optional collector" in result["reason"]
+        assert result["top"] == []
+
+    def test_should_return_unavailable_when_network_collector_raises_os_error(self, mocker):
+        """Test collector OS errors fall back to unavailable network process stats."""
+        monitor = ResourceMonitor({"enabled": True})
+        mocker.patch("shutil.which", return_value="/usr/sbin/nethogs")
+        mocker.patch("os.geteuid", return_value=0)
+        mocker.patch("subprocess.run", side_effect=OSError("nethogs failed"))
+
+        result = monitor._collect_top_network_processes()
+
+        assert result["available"] is False
+        assert "optional collector" in result["reason"]
+        assert result["top"] == []
 
     def test_should_append_memory_action_results(self, mocker):
         """Test memory action results are appended."""

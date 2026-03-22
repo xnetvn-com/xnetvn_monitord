@@ -27,11 +27,11 @@ This format follows Keep a Changelog and uses Semantic Versioning.
 
 ### Changed
 
-- None.
+- Notification reports now include safe top-5 process diagnostics for CPU %, CPU core load, RAM, disk I/O, and best-effort per-process network throughput when a channel enables `include_system_stats`.
 
 ### Fixed
 
-- None.
+- Process diagnostics keep only executable name, user, and PID, and explicitly mark network throughput as unavailable when the optional collector is missing, lacks privileges, or yields no valid rows.
 
 ## [1.1.0] - 2026-02-06
 
