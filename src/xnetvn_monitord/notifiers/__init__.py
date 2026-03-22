@@ -546,9 +546,7 @@ class NotificationManager:
         """Format startup-specific summary details for plain text reports."""
         lines = ["\nStartup Summary:"]
         lines.append(f"Version: {report.get('version', 'N/A')}")
-        lines.append(
-            f"Startup Time: {report.get('startup_time') or self._format_timestamp(report.get('timestamp'))}"
-        )
+        lines.append(f"Startup Time: {report.get('startup_time') or self._format_timestamp(report.get('timestamp'))}")
         lines.append(f"Check Interval: {report.get('check_interval', 'N/A')}")
         lines.append(f"Enabled Channels: {', '.join(report.get('enabled_channels', [])) or 'none'}")
         lines.extend(self._format_system_stats_plain(report.get("system_stats", {}), include_header=True))
@@ -560,9 +558,7 @@ class NotificationManager:
         sections.append("<h3>Version</h3>")
         sections.append(f"<pre>{report.get('version', 'N/A')}</pre>")
         sections.append("<h3>Startup Time</h3>")
-        sections.append(
-            f"<pre>{report.get('startup_time') or self._format_timestamp(report.get('timestamp'))}</pre>"
-        )
+        sections.append(f"<pre>{report.get('startup_time') or self._format_timestamp(report.get('timestamp'))}</pre>")
         sections.append("<h3>Check Interval</h3>")
         sections.append(f"<pre>{report.get('check_interval', 'N/A')}</pre>")
         sections.append("<h3>Enabled Channels</h3>")
