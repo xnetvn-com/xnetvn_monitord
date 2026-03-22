@@ -92,8 +92,11 @@ class SlackNotifier:
 
         return self._post_payload(slack_payload)
 
-    def test_connection(self) -> bool:
+    def test_connection(self, send_test_message: Optional[bool] = None) -> bool:
         """Test Slack webhook configuration.
+
+        Args:
+            send_test_message: Override whether to send a live startup test message.
 
         Returns:
             True if configuration looks valid or test request succeeds, False otherwise.
@@ -106,8 +109,15 @@ class SlackNotifier:
             logger.warning("Slack webhook URL not configured")
             return False
 
-        if not self.test_on_startup:
-            logger.info("Slack test_on_startup disabled; skipping live test")
+        if not is_http_url(self.webhook_url):
+            logger.error("Slack webhook URL has invalid scheme: %s", redact_url_for_logs(self.webhook_url))
+            return False
+
+        if send_test_message is None:
+            send_test_message = self.test_on_startup
+
+        if not send_test_message:
+            logger.info("Slack startup validation completed without sending a test message")
             return True
 
         return self._post_payload({"text": "Slack test notification from xNetVN Monitor"})

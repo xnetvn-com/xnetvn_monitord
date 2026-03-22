@@ -351,7 +351,7 @@ _xNetVN Monitor_
         """
         return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
-    def test_connection(self) -> bool:
+    def test_connection(self, send_test_message: Optional[bool] = None) -> bool:
         """Test Telegram bot connection.
 
         Returns:

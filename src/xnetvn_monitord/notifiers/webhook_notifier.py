@@ -95,8 +95,11 @@ class WebhookNotifier:
         logger.error("Failed to send webhook notification to any endpoint")
         return False
 
-    def test_connection(self) -> bool:
+    def test_connection(self, send_test_message: Optional[bool] = None) -> bool:
         """Test webhook configuration.
+
+        Args:
+            send_test_message: Override whether to send a live startup test payload.
 
         Returns:
             True if configuration looks valid or test request succeeds, False otherwise.
@@ -109,8 +112,16 @@ class WebhookNotifier:
             logger.warning("No webhook URLs configured")
             return False
 
-        if not self.test_on_startup:
-            logger.info("Webhook test_on_startup disabled; skipping live test")
+        invalid_url = next((url for url in self.urls if not is_http_url(url)), None)
+        if invalid_url:
+            logger.error("Webhook URL has invalid scheme: %s", redact_url_for_logs(invalid_url))
+            return False
+
+        if send_test_message is None:
+            send_test_message = self.test_on_startup
+
+        if not send_test_message:
+            logger.info("Webhook startup validation completed without sending a test payload")
             return True
 
         test_payload = {

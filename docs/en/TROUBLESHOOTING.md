@@ -111,8 +111,8 @@ post_date: "2026-02-03"
 ### Checks & Fixes
 
 - **test_on_startup**:
-  - When enabled, notifiers attempt to send a test message on daemon startup. Check `notifications.<provider>.test_on_startup`.
-  - If `test_on_startup` is false, the daemon will *not* send a test message; enable temporarily to validate connectivity.
+  - When enabled, the daemon validates channel configuration at startup and then sends the normal startup summary instead of a separate test message. Check `notifications.<provider>.test_on_startup`.
+  - If `test_on_startup` is false, the daemon can still send the startup summary when the channel is enabled, but it skips the separate startup validation step.
 
 - **Rate limiting behavior (rate_limit)**:
   - Sending too many alerts in a short window may be blocked by `notifications.rate_limit` or third-party limits (Slack API, Telegram). Adjust rate limits if needed.

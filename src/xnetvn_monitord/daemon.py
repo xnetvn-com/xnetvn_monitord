@@ -104,8 +104,8 @@ class MonitorDaemon:
 
         # Test notification channels
         if enabled_channels:
-            logger.info("Testing notification channels...")
-            test_results = self.notification_manager.test_all_channels()
+            logger.info("Validating notification channels before startup summary...")
+            test_results = self.notification_manager.test_all_channels(send_test_message=False)
             for channel, result in test_results.items():
                 status = "OK" if result else "FAILED"
                 logger.info(f"  {channel}: {status}")

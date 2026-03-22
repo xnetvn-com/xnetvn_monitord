@@ -93,7 +93,7 @@ separated clearly for easier extensibility.
 
 ## Operational Notes
 
-- test_on_startup controls whether to send test notifications at startup.
+- test_on_startup controls whether startup channel validation runs before the startup summary is sent.
 - Rate limits and min severity help prevent alert spam.
 - Cooldowns prevent repeated recovery actions.
 

@@ -22,7 +22,7 @@ import smtplib
 import socket
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Dict
+from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -367,7 +367,7 @@ xNetVN Monitor Daemon
                 lines.append(f"{'  ' * indent}{key}: {value}")
         return "\n".join(lines)
 
-    def test_connection(self) -> bool:
+    def test_connection(self, send_test_message: Optional[bool] = None) -> bool:
         """Test SMTP connection.
 
         Returns:

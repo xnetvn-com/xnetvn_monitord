@@ -80,7 +80,7 @@ class TestMonitorDaemonInitialization:
 
         daemon.initialize()
 
-        manager_instance.test_all_channels.assert_called_once()
+        manager_instance.test_all_channels.assert_called_once_with(send_test_message=False)
 
     def test_should_send_startup_summary_notification(self, mocker, tmp_path):
         """Test daemon sends a startup summary notification after initialization."""

@@ -112,8 +112,8 @@ post_date: "2026-02-03"
 ### Kiểm tra & Giải pháp
 
 - **test_on_startup**:
-  - Khi bật, notifiers sẽ cố gắng gửi một thông báo thử khi daemon khởi động. Kiểm tra cấu hình `notifications.<provider>.test_on_startup`.
-  - Nếu `test_on_startup` = false, daemon sẽ *không* gửi thông báo thử; bật tạm thời để xác minh kết nối.
+  - Khi bật, daemon sẽ xác minh cấu hình kênh khi khởi động và sau đó gửi startup summary chuẩn thay vì một thông báo thử riêng. Kiểm tra cấu hình `notifications.<provider>.test_on_startup`.
+  - Nếu `test_on_startup` = false, daemon vẫn có thể gửi startup summary khi kênh được bật, nhưng sẽ bỏ qua bước xác minh khởi động riêng.
 
 - **Hành vi giới hạn tốc độ (rate_limit)**:
   - Nếu gửi quá nhiều thông báo trong thời gian ngắn, hệ thống có thể chặn theo cấu hình `notifications.rate_limit` hoặc do hạn chế bên thứ ba (Slack API, Telegram). Điều chỉnh `rate_limit` nếu cần.

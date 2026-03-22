@@ -90,8 +90,11 @@ class DiscordNotifier:
 
         return self._post_payload(discord_payload)
 
-    def test_connection(self) -> bool:
+    def test_connection(self, send_test_message: Optional[bool] = None) -> bool:
         """Test Discord webhook configuration.
+
+        Args:
+            send_test_message: Override whether to send a live startup test message.
 
         Returns:
             True if configuration looks valid or test request succeeds, False otherwise.
@@ -104,8 +107,15 @@ class DiscordNotifier:
             logger.warning("Discord webhook URL not configured")
             return False
 
-        if not self.test_on_startup:
-            logger.info("Discord test_on_startup disabled; skipping live test")
+        if not is_http_url(self.webhook_url):
+            logger.error("Discord webhook URL has invalid scheme: %s", redact_url_for_logs(self.webhook_url))
+            return False
+
+        if send_test_message is None:
+            send_test_message = self.test_on_startup
+
+        if not send_test_message:
+            logger.info("Discord startup validation completed without sending a test message")
             return True
 
         return self._post_payload({"content": "Discord test notification from xNetVN Monitor"})

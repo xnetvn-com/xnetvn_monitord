@@ -93,7 +93,7 @@ ràng để dễ mở rộng.
 
 ## Lưu ý vận hành
 
-- test_on_startup quyết định có gửi thông báo thử khi khởi động.
+- test_on_startup quyết định có chạy bước xác minh kênh khi khởi động trước khi gửi startup summary.
 - Rate limit và min severity giúp tránh spam cảnh báo.
 - Cooldown ngăn lặp lại hành động khôi phục liên tục.
 

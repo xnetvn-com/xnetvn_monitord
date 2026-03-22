@@ -625,6 +625,55 @@ class TestNotificationManagerReports:
             "discord": True,
         }
 
+    def test_should_validate_channels_without_live_test_message(self, mocker):
+        """Test startup validation can skip live test messages for enabled channels."""
+        email_instance = mocker.Mock()
+        email_instance.test_connection.return_value = True
+
+        telegram_instance = mocker.Mock()
+        telegram_instance.test_connection.return_value = True
+
+        webhook_instance = mocker.Mock()
+        webhook_instance.test_connection.return_value = True
+
+        slack_instance = mocker.Mock()
+        slack_instance.test_connection.return_value = True
+
+        discord_instance = mocker.Mock()
+        discord_instance.test_connection.return_value = True
+
+        mocker.patch("xnetvn_monitord.notifiers.EmailNotifier", return_value=email_instance)
+        mocker.patch("xnetvn_monitord.notifiers.TelegramNotifier", return_value=telegram_instance)
+        mocker.patch("xnetvn_monitord.notifiers.WebhookNotifier", return_value=webhook_instance)
+        mocker.patch("xnetvn_monitord.notifiers.SlackNotifier", return_value=slack_instance)
+        mocker.patch("xnetvn_monitord.notifiers.DiscordNotifier", return_value=discord_instance)
+
+        manager = NotificationManager(
+            {
+                "enabled": True,
+                "email": {"enabled": True},
+                "telegram": {"enabled": True},
+                "webhook": {"enabled": True},
+                "slack": {"enabled": True},
+                "discord": {"enabled": True},
+            }
+        )
+
+        results = manager.test_all_channels(send_test_message=False)
+
+        assert results == {
+            "email": True,
+            "telegram": True,
+            "webhook": True,
+            "slack": True,
+            "discord": True,
+        }
+        email_instance.test_connection.assert_called_once_with(send_test_message=False)
+        telegram_instance.test_connection.assert_called_once_with(send_test_message=False)
+        webhook_instance.test_connection.assert_called_once_with(send_test_message=False)
+        slack_instance.test_connection.assert_called_once_with(send_test_message=False)
+        discord_instance.test_connection.assert_called_once_with(send_test_message=False)
+
 
 class TestNotificationManagerHelpers:
     """Tests for NotificationManager helper methods."""

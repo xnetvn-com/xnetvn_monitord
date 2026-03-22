@@ -154,6 +154,22 @@ class TestWebhookNotifier:
 
         assert notifier.test_connection() is True
 
+    def test_should_validate_connection_without_sending_startup_test_message(self, mocker):
+        """Test startup validation skips the user-facing webhook test payload."""
+        open_url_mock = mocker.patch("xnetvn_monitord.notifiers.webhook_notifier.open_url")
+
+        notifier = WebhookNotifier(
+            {
+                "enabled": True,
+                "urls": ["https://example.com"],
+                "test_on_startup": True,
+            }
+        )
+
+        assert notifier.test_connection(send_test_message=False) is True
+
+        open_url_mock.assert_not_called()
+
     def test_should_normalize_urls_with_single_url(self):
         """Test url overrides urls list in configuration."""
         notifier = WebhookNotifier(

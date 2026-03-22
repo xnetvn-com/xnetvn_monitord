@@ -160,6 +160,22 @@ class TestSlackNotifier:
 
         assert notifier.test_connection() is True
 
+    def test_should_validate_connection_without_sending_startup_test_message(self, mocker):
+        """Test startup validation skips the user-facing Slack test message."""
+        open_url_mock = mocker.patch("xnetvn_monitord.notifiers.slack_notifier.open_url")
+
+        notifier = SlackNotifier(
+            {
+                "enabled": True,
+                "webhook_url": "https://example.com",
+                "test_on_startup": True,
+            }
+        )
+
+        assert notifier.test_connection(send_test_message=False) is True
+
+        open_url_mock.assert_not_called()
+
     def test_should_use_unverified_ssl_context_when_disabled(self, mocker):
         """Test SSL verification disabled uses default context with verification disabled."""
         context_mock = mocker.patch(

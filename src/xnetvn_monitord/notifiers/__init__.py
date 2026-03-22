@@ -785,8 +785,11 @@ class NotificationManager:
 
         return filtered
 
-    def test_all_channels(self) -> Dict[str, bool]:
+    def test_all_channels(self, send_test_message: Optional[bool] = None) -> Dict[str, bool]:
         """Test all notification channels.
+
+        Args:
+            send_test_message: Override whether channels should emit a live startup test message.
 
         Returns:
             Dictionary with channel names and their test results.
@@ -795,23 +798,23 @@ class NotificationManager:
 
         if self.email_notifier:
             logger.info("Testing email notification channel...")
-            results["email"] = self.email_notifier.test_connection()
+            results["email"] = self.email_notifier.test_connection(send_test_message=send_test_message)
 
         if self.telegram_notifier:
             logger.info("Testing Telegram notification channel...")
-            results["telegram"] = self.telegram_notifier.test_connection()
+            results["telegram"] = self.telegram_notifier.test_connection(send_test_message=send_test_message)
 
         if self.webhook_notifier:
             logger.info("Testing webhook notification channel...")
-            results["webhook"] = self.webhook_notifier.test_connection()
+            results["webhook"] = self.webhook_notifier.test_connection(send_test_message=send_test_message)
 
         if self.slack_notifier:
             logger.info("Testing Slack notification channel...")
-            results["slack"] = self.slack_notifier.test_connection()
+            results["slack"] = self.slack_notifier.test_connection(send_test_message=send_test_message)
 
         if self.discord_notifier:
             logger.info("Testing Discord notification channel...")
-            results["discord"] = self.discord_notifier.test_connection()
+            results["discord"] = self.discord_notifier.test_connection(send_test_message=send_test_message)
 
         return results
 
