@@ -24,8 +24,8 @@ import signal
 import socket
 import sys
 import time
-from pathlib import Path
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from . import __version__ as package_version
