@@ -62,11 +62,8 @@ on:
   # push:
   #   branches: [ "main" ]
 
-  # pull_request_target is used to securely share secret to the PR's workflow run.
-  # For more info visit: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target
-  pull_request_target:
-    branches: [ "main" ]
-    types: [ assigned, opened, synchronize, reopened, labeled, edited ]
+  # PR scanning is disabled here because the upstream CRDA action requires PR label mutations
+  # that are incompatible with the repository token policy in this project.
 
 permissions:
   contents: read
@@ -76,11 +73,27 @@ jobs:
     permissions:
       contents: read            # for actions/checkout to fetch code
       security-events: write    # for redhat-actions/crda to upload SARIF results
+      issues: write             # for redhat-actions/crda to read/create PR labels via Issues API
+      pull-requests: write      # for redhat-actions/crda to apply scan status labels to pull requests
     name: Scan project vulnerabilities with CRDA
     runs-on: ubuntu-latest
     steps:
 
+      - name: Check CRDA credentials
+        id: auth
+        env:
+          CRDA_KEY: ${{ secrets.CRDA_KEY }}
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          if [ -n "$CRDA_KEY" ] || [ -n "$SNYK_TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping CRDA Scan because neither CRDA_KEY nor SNYK_TOKEN is configured."
+          fi
+
       - name: Check out repository
+        if: steps.auth.outputs.enabled == 'true'
         uses: actions/checkout@v4
 
       # *******************************************************************
@@ -100,6 +113,7 @@ jobs:
 
       # https://github.com/redhat-actions/openshift-tools-installer/blob/main/README.md
       - name: Install CRDA CLI
+        if: steps.auth.outputs.enabled == 'true'
         uses: redhat-actions/openshift-tools-installer@v1
         with:
           source: github
@@ -118,6 +132,7 @@ jobs:
       # Visit https://github.com/redhat-actions/crda/#4-set-up-authentication to understand
       # process to get a SNYK_TOKEN or a CRDA_KEY
       - name: CRDA Scan
+        if: steps.auth.outputs.enabled == 'true'
         id: scan
         uses: redhat-actions/crda@v1
         with:
