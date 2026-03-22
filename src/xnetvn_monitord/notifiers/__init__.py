@@ -480,9 +480,16 @@ class NotificationManager:
             lines.append("\nDetails:")
             lines.append(str(report.get("details")))
 
+        if report.get("event_type") == "startup_summary":
+            lines.extend(self._format_startup_summary_plain(report))
+
         if report.get("system_stats"):
-            lines.append("\nSystem Stats:")
-            lines.append(self._dict_to_string(report.get("system_stats", {}), indent=1))
+            lines.extend(
+                self._format_system_stats_plain(
+                    report.get("system_stats", {}),
+                    include_header=report.get("event_type") != "startup_summary",
+                )
+            )
 
         return "\n".join(lines).strip()
 
@@ -522,11 +529,90 @@ class NotificationManager:
             sections.append("<h3>Details</h3>")
             sections.append(f"<pre>{report.get('details')}</pre>")
 
+        if report.get("event_type") == "startup_summary":
+            sections.extend(self._format_startup_summary_html(report))
+
         if report.get("system_stats"):
-            sections.append("<h3>System Stats</h3>")
-            sections.append(f"<pre>{self._dict_to_string(report.get('system_stats', {}), indent=1)}</pre>")
+            sections.extend(
+                self._format_system_stats_html(
+                    report.get("system_stats", {}),
+                    include_header=report.get("event_type") != "startup_summary",
+                )
+            )
 
         return "\n".join(sections).strip()
+
+    def _format_startup_summary_plain(self, report: Dict) -> List[str]:
+        """Format startup-specific summary details for plain text reports."""
+        lines = ["\nStartup Summary:"]
+        lines.append(f"Version: {report.get('version', 'N/A')}")
+        lines.append(
+            f"Startup Time: {report.get('startup_time') or self._format_timestamp(report.get('timestamp'))}"
+        )
+        lines.append(f"Check Interval: {report.get('check_interval', 'N/A')}")
+        lines.append(f"Enabled Channels: {', '.join(report.get('enabled_channels', [])) or 'none'}")
+        lines.extend(self._format_system_stats_plain(report.get("system_stats", {}), include_header=True))
+        return lines
+
+    def _format_startup_summary_html(self, report: Dict) -> List[str]:
+        """Format startup-specific summary details for HTML reports."""
+        sections = ["<h3>Startup Summary</h3>"]
+        sections.append("<h3>Version</h3>")
+        sections.append(f"<pre>{report.get('version', 'N/A')}</pre>")
+        sections.append("<h3>Startup Time</h3>")
+        sections.append(
+            f"<pre>{report.get('startup_time') or self._format_timestamp(report.get('timestamp'))}</pre>"
+        )
+        sections.append("<h3>Check Interval</h3>")
+        sections.append(f"<pre>{report.get('check_interval', 'N/A')}</pre>")
+        sections.append("<h3>Enabled Channels</h3>")
+        sections.append(f"<pre>{', '.join(report.get('enabled_channels', [])) or 'none'}</pre>")
+        sections.extend(self._format_system_stats_html(report.get("system_stats", {}), include_header=True))
+        return sections
+
+    def _format_system_stats_plain(self, system_stats: Dict, include_header: bool = True) -> List[str]:
+        """Format system statistics for plain text reports."""
+        if not system_stats:
+            return []
+
+        lines = ["\nSystem Stats:"] if include_header else []
+        for key, value in system_stats.items():
+            if key == "memory":
+                label = "RAM"
+            elif key == "cpu":
+                label = "CPU"
+            elif key == "disk":
+                label = "Disk"
+            else:
+                label = str(key)
+            lines.append(f"\n{label}:")
+            if isinstance(value, dict):
+                lines.append(self._dict_to_string(value, indent=1))
+            else:
+                lines.append(str(value))
+        return lines
+
+    def _format_system_stats_html(self, system_stats: Dict, include_header: bool = True) -> List[str]:
+        """Format system statistics for HTML reports."""
+        if not system_stats:
+            return []
+
+        sections = ["<h3>System Stats</h3>"] if include_header else []
+        for key, value in system_stats.items():
+            if key == "memory":
+                label = "RAM"
+            elif key == "cpu":
+                label = "CPU"
+            elif key == "disk":
+                label = "Disk"
+            else:
+                label = str(key)
+            sections.append(f"<h3>{label}</h3>")
+            if isinstance(value, dict):
+                sections.append(f"<pre>{self._dict_to_string(value, indent=1)}</pre>")
+            else:
+                sections.append(f"<pre>{value}</pre>")
+        return sections
 
     def _format_timestamp(self, timestamp: Optional[float]) -> str:
         """Format a timestamp for reporting.

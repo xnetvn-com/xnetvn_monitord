@@ -209,6 +209,9 @@ Mỗi kênh (email/telegram/slack/discord/webhook) có:
   trong đó YYY là topic (message_thread_id).
 - Telegram, Slack và Discord sẽ ẩn `system_stats.network.interfaces`
   để giữ thông báo gọn hơn, nhưng vẫn giữ các phần còn lại của `System Stats`.
+- Khi khởi động, daemon sẽ gửi một startup summary chung tới mọi kênh đang bật
+  với hostname, version, thời điểm khởi động, check_interval, các kênh đang
+  bật, CPU, RAM và Disk.
 
 Ví dụ Slack:
 

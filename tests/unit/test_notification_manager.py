@@ -802,6 +802,45 @@ class TestNotificationManagerHelpers:
         assert "<h3>Details</h3>" in text
         assert "<h3>System Stats</h3>" in text
 
+    def test_should_format_startup_summary_sections(self):
+        """Test startup summary renders core system information."""
+        manager = NotificationManager({"enabled": True})
+        report = {
+            "event_type": "startup_summary",
+            "timestamp": 1700000000.0,
+            "severity": "info",
+            "hostname": "test-host",
+            "version": "1.2.3",
+            "check_interval": 60,
+            "enabled_channels": ["email", "telegram"],
+            "startup_time": "2026-03-22T00:00:00+00:00",
+            "system_stats": {
+                "cpu": {"load_1min": 0.1},
+                "memory": {"used_percent": 42.0},
+                "disk": {"root": {"used_percent": 55.0}},
+            },
+        }
+
+        plain_text = manager._format_report_plain("event", report)
+        html_text = manager._format_report_html("event", report)
+
+        assert "Version:" in plain_text
+        assert "Check Interval:" in plain_text
+        assert "Enabled Channels:" in plain_text
+        assert "Startup Time:" in plain_text
+        assert "CPU:" in plain_text
+        assert "RAM:" in plain_text
+        assert "Disk:" in plain_text
+
+        assert "<h3>Startup Summary</h3>" in html_text
+        assert "<h3>Version</h3>" in html_text
+        assert "<h3>Check Interval</h3>" in html_text
+        assert "<h3>Enabled Channels</h3>" in html_text
+        assert "<h3>Startup Time</h3>" in html_text
+        assert "<h3>CPU</h3>" in html_text
+        assert "<h3>RAM</h3>" in html_text
+        assert "<h3>Disk</h3>" in html_text
+
     def test_should_handle_custom_message_exceptions(self, mocker):
         """Test custom message handles channel exceptions."""
         email_instance = mocker.Mock()

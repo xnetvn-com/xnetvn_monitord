@@ -211,6 +211,9 @@ Each channel (email/telegram/slack/discord/webhook) has:
   where YYY is the topic (message_thread_id).
 - Telegram, Slack, and Discord reports hide `system_stats.network.interfaces`
   to keep chat messages concise while preserving the rest of `System Stats`.
+- On startup, the daemon sends a shared startup summary to every enabled channel
+  with hostname, version, startup time, check_interval, enabled channels, CPU,
+  RAM, and Disk.
 
 Slack example:
 

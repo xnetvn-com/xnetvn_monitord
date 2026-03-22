@@ -82,6 +82,36 @@ class TestMonitorDaemonInitialization:
 
         manager_instance.test_all_channels.assert_called_once()
 
+    def test_should_send_startup_summary_notification(self, mocker, tmp_path):
+        """Test daemon sends a startup summary notification after initialization."""
+        config = _build_minimal_config(tmp_path)
+        config["general"]["check_interval"] = 15
+
+        mocker.patch("xnetvn_monitord.daemon.ConfigLoader.load", return_value=config)
+        mocker.patch("xnetvn_monitord.daemon.ServiceMonitor")
+        mocker.patch("xnetvn_monitord.daemon.ResourceMonitor")
+        manager_mock = mocker.patch("xnetvn_monitord.daemon.NotificationManager")
+
+        manager_instance = manager_mock.return_value
+        manager_instance.get_enabled_channels.return_value = ["email", "telegram"]
+        manager_instance.test_all_channels.return_value = {"email": True, "telegram": True}
+
+        daemon = MonitorDaemon("/tmp/config.yaml")
+        mocker.patch.object(daemon, "_create_pid_file")
+        mocker.patch.object(daemon, "_get_system_stats", return_value={"cpu": {"load_1min": 0.1}})
+
+        daemon.initialize()
+
+        manager_instance.notify_event.assert_called_once()
+        startup_report = manager_instance.notify_event.call_args.args[0]
+
+        assert startup_report["event_type"] == "startup_summary"
+        assert startup_report["version"] == package_version
+        assert startup_report["check_interval"] == 15
+        assert startup_report["enabled_channels"] == ["email", "telegram"]
+        assert startup_report["system_stats"] == {"cpu": {"load_1min": 0.1}}
+        assert startup_report["hostname"] == daemon.hostname
+
     def test_should_publish_runtime_version_to_systemd_status(self, mocker, tmp_path):
         """Test daemon publishes a runtime version status string for systemd."""
         config = _build_minimal_config(tmp_path)

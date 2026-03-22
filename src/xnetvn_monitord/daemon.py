@@ -25,6 +25,7 @@ import socket
 import sys
 import time
 from pathlib import Path
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from . import __version__ as package_version
@@ -109,6 +110,8 @@ class MonitorDaemon:
                 status = "OK" if result else "FAILED"
                 logger.info(f"  {channel}: {status}")
 
+            self._send_startup_summary_notification(enabled_channels)
+
         # Check for updates if enabled
         self._maybe_check_for_updates()
 
@@ -122,6 +125,31 @@ class MonitorDaemon:
     def _get_runtime_version(self) -> str:
         """Return the running package version used for update decisions."""
         return package_version
+
+    def _send_startup_summary_notification(self, enabled_channels: list[str]) -> None:
+        """Send a startup summary notification to all enabled channels.
+
+        Args:
+            enabled_channels: Notification channels enabled at startup.
+        """
+        if not self.notification_manager:
+            return
+
+        startup_time = datetime.fromtimestamp(time.time(), tz=timezone.utc).isoformat()
+        startup_report = {
+            "event_type": "startup_summary",
+            "title": "Startup Summary",
+            "timestamp": time.time(),
+            "severity": "info",
+            "hostname": self.hostname,
+            "version": self._get_runtime_version(),
+            "startup_time": startup_time,
+            "check_interval": self.config.get("general", {}).get("check_interval", 60),
+            "enabled_channels": enabled_channels,
+            "system_stats": self._get_system_stats(),
+        }
+
+        self.notification_manager.notify_event(startup_report)
 
     def _build_runtime_status(self, state: str, cycle_duration: Optional[float] = None) -> str:
         """Build a concise runtime status line for systemd."""
