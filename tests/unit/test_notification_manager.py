@@ -715,13 +715,15 @@ class TestNotificationManagerHelpers:
     def test_should_stringify_nested_lists(self):
         """Test dict to string handles nested lists and dicts."""
         manager = NotificationManager({"enabled": True})
-        payload = {"items": [{"name": "alpha"}, "beta"]}
+        payload = {"items": [{"name": "alpha", "count": 1234}, "beta", 9876.5]}
 
         text = manager._dict_to_string(payload)
 
         assert "items:" in text
         assert "name: alpha" in text
+        assert "count: 1,234" in text
         assert "- beta" in text
+        assert "- 9,876.5" in text
 
     def test_should_filter_sensitive_content_with_invalid_pattern(self, caplog):
         """Test invalid regex pattern is handled gracefully."""
@@ -801,10 +803,10 @@ class TestNotificationManagerHelpers:
             "timestamp": 1700000000.0,
             "severity": "high",
             "hostname": "test-host",
-            "resource": {"type": "cpu"},
-            "action": {"name": "restart"},
+            "resource": {"type": "cpu", "iterations": 1234, "usage": 98.5},
+            "action": {"name": "restart", "attempts": 2},
             "details": "Recovered",
-            "system_stats": {"cpu": {"load_1min": 1.0}},
+            "system_stats": {"cpu": {"load_1min": 1234567.89}, "uptime_seconds": 9876543},
         }
 
         text = manager._format_report_plain("action", report)
@@ -814,6 +816,13 @@ class TestNotificationManagerHelpers:
         assert "Details:" in text
         assert "System Stats:" in text
         assert "Hostname: test-host" in text
+        assert "iterations: 1,234" in text
+        assert "usage: 98.5" in text
+        assert "attempts: 2" in text
+        assert "load_1min: 1,234,567.89" in text
+        assert "uptime_seconds:" in text
+        assert "9,876,543" in text
+
 
     def test_should_format_report_html_with_hostname(self):
         """Test HTML report formatting includes hostname."""
@@ -828,6 +837,23 @@ class TestNotificationManagerHelpers:
         text = manager._format_report_html("event", report)
 
         assert "<strong>Hostname:</strong> test-host" in text
+
+    def test_should_format_startup_summary_numbers(self):
+        """Test startup summary formats numeric values for display."""
+        manager = NotificationManager({"enabled": True})
+        report = {
+            "event_type": "startup_summary",
+            "timestamp": 1700000000.0,
+            "severity": "info",
+            "check_interval": 120000,
+            "system_stats": {"cpu": {"load_1min": 1.0}},
+        }
+
+        text = manager._format_report_plain("event", report)
+
+        assert "Startup Summary:" in text
+        assert "Check Interval: 120,000" in text
+        assert "load_1min: 1" in text
 
     def test_should_format_report_html_with_sections(self):
         """Test HTML report formatting includes sections."""

@@ -22,7 +22,7 @@ import smtplib
 import socket
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +91,21 @@ class EmailNotifier:
         except Exception as e:
             logger.error(f"Failed to send email notification: {str(e)}", exc_info=True)
             return False
+
+    @staticmethod
+    def _format_display_value(value: Any) -> str:
+        """Format scalar values for user-facing notification content."""
+        if isinstance(value, bool):
+            return str(value)
+
+        if isinstance(value, int):
+            return f"{value:,}"
+
+        if isinstance(value, float):
+            formatted_value = f"{value:,.2f}"
+            return formatted_value.rstrip("0").rstrip(".")
+
+        return str(value)
 
     def _send_via_smtp(self, msg: MIMEMultipart) -> None:
         """Send email via SMTP.
@@ -362,9 +377,9 @@ xNetVN Monitor Daemon
                     if isinstance(item, dict):
                         lines.append(self._dict_to_string(item, indent + 1))
                     else:
-                        lines.append(f"{'  ' * (indent + 1)}- {item}")
+                        lines.append(f"{'  ' * (indent + 1)}- {self._format_display_value(item)}")
             else:
-                lines.append(f"{'  ' * indent}{key}: {value}")
+                lines.append(f"{'  ' * indent}{key}: {self._format_display_value(value)}")
         return "\n".join(lines)
 
     def test_connection(self, send_test_message: Optional[bool] = None) -> bool:

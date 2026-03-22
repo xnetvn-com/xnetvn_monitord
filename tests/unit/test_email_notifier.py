@@ -193,13 +193,13 @@ class TestEmailNotifierFormatting:
         """Test dictionary formatting handles nested structures."""
         notifier = EmailNotifier({"enabled": True})
 
-        data = {"a": {"b": 1}, "list": ["item", {"c": 2}]}
+        data = {"a": {"b": 1234}, "list": ["item", {"c": 9876.5}]}
         result = notifier._dict_to_string(data)
 
         assert "a:" in result
-        assert "b: 1" in result
+        assert "b: 1,234" in result
         assert "- item" in result
-        assert "c: 2" in result
+        assert "c: 9,876.5" in result
 
 
 class TestEmailNotifierConnection:

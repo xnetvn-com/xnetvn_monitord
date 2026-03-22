@@ -23,7 +23,7 @@ import socket
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from xnetvn_monitord.utils.network import (
     ProxyConfigurationError,
@@ -335,10 +335,25 @@ _xNetVN Monitor_
                     if isinstance(item, dict):
                         lines.append(self._dict_to_string(item, indent + 1))
                     else:
-                        lines.append(f"{'  ' * (indent + 1)}- {item}")
+                        lines.append(f"{'  ' * (indent + 1)}- {self._format_display_value(item)}")
             else:
-                lines.append(f"{'  ' * indent}{key}: {value}")
+                lines.append(f"{'  ' * indent}{key}: {self._format_display_value(value)}")
         return "\n".join(lines)
+
+    @staticmethod
+    def _format_display_value(value: Any) -> str:
+        """Format scalar values for user-facing notification content."""
+        if isinstance(value, bool):
+            return str(value)
+
+        if isinstance(value, int):
+            return f"{value:,}"
+
+        if isinstance(value, float):
+            formatted_value = f"{value:,.2f}"
+            return formatted_value.rstrip("0").rstrip(".")
+
+        return str(value)
 
     def _escape_html(self, text: str) -> str:
         """Escape HTML special characters.

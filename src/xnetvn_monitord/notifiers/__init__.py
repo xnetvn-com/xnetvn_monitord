@@ -547,7 +547,7 @@ class NotificationManager:
         lines = ["\nStartup Summary:"]
         lines.append(f"Version: {report.get('version', 'N/A')}")
         lines.append(f"Startup Time: {report.get('startup_time') or self._format_timestamp(report.get('timestamp'))}")
-        lines.append(f"Check Interval: {report.get('check_interval', 'N/A')}")
+        lines.append(f"Check Interval: {self._format_display_value(report.get('check_interval', 'N/A'))}")
         lines.append(f"Enabled Channels: {', '.join(report.get('enabled_channels', [])) or 'none'}")
         lines.extend(self._format_system_stats_plain(report.get("system_stats", {}), include_header=True))
         return lines
@@ -560,7 +560,7 @@ class NotificationManager:
         sections.append("<h3>Startup Time</h3>")
         sections.append(f"<pre>{report.get('startup_time') or self._format_timestamp(report.get('timestamp'))}</pre>")
         sections.append("<h3>Check Interval</h3>")
-        sections.append(f"<pre>{report.get('check_interval', 'N/A')}</pre>")
+        sections.append(f"<pre>{self._format_display_value(report.get('check_interval', 'N/A'))}</pre>")
         sections.append("<h3>Enabled Channels</h3>")
         sections.append(f"<pre>{', '.join(report.get('enabled_channels', [])) or 'none'}</pre>")
         sections.extend(self._format_system_stats_html(report.get("system_stats", {}), include_header=True))
@@ -585,7 +585,7 @@ class NotificationManager:
             if isinstance(value, dict):
                 lines.append(self._dict_to_string(value, indent=1))
             else:
-                lines.append(str(value))
+                lines.append(self._format_display_value(value))
         return lines
 
     def _format_system_stats_html(self, system_stats: Dict, include_header: bool = True) -> List[str]:
@@ -607,7 +607,7 @@ class NotificationManager:
             if isinstance(value, dict):
                 sections.append(f"<pre>{self._dict_to_string(value, indent=1)}</pre>")
             else:
-                sections.append(f"<pre>{value}</pre>")
+                sections.append(f"<pre>{self._format_display_value(value)}</pre>")
         return sections
 
     def _format_timestamp(self, timestamp: Optional[float]) -> str:
@@ -733,10 +733,25 @@ class NotificationManager:
                     if isinstance(item, dict):
                         lines.append(self._dict_to_string(item, indent + 1))
                     else:
-                        lines.append(f"{'  ' * (indent + 1)}- {item}")
+                        lines.append(f"{'  ' * (indent + 1)}- {self._format_display_value(item)}")
             else:
-                lines.append(f"{'  ' * indent}{key}: {value}")
+                lines.append(f"{'  ' * indent}{key}: {self._format_display_value(value)}")
         return "\n".join(lines)
+
+    @staticmethod
+    def _format_display_value(value: Any) -> str:
+        """Format scalar values for user-facing notification content."""
+        if isinstance(value, bool):
+            return str(value)
+
+        if isinstance(value, int):
+            return f"{value:,}"
+
+        if isinstance(value, float):
+            formatted_value = f"{value:,.2f}"
+            return formatted_value.rstrip("0").rstrip(".")
+
+        return str(value)
 
     def _filter_sensitive_content(self, content: str) -> str:
         """Filter sensitive information from content.
