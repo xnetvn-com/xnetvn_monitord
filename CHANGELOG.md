@@ -6,6 +6,12 @@ This format follows Keep a Changelog and uses Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.2.7] - 2026-03-22
+
+### Changed
+
+- Release: bump package to v1.2.7 and refresh release metadata for tag-driven publication.
+
 ## [1.2.6] - 2026-03-19
 
 ### Changed
