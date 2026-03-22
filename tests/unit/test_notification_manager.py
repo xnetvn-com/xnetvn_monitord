@@ -823,7 +823,6 @@ class TestNotificationManagerHelpers:
         assert "uptime_seconds:" in text
         assert "9,876,543" in text
 
-
     def test_should_format_report_html_with_hostname(self):
         """Test HTML report formatting includes hostname."""
         manager = NotificationManager({"enabled": True})
@@ -915,6 +914,54 @@ class TestNotificationManagerHelpers:
         assert "<h3>CPU</h3>" in html_text
         assert "<h3>RAM</h3>" in html_text
         assert "<h3>Disk</h3>" in html_text
+
+    def test_should_format_top_process_sections_in_reports(self):
+        """Test report formatting renders top process sections for fast diagnosis."""
+        manager = NotificationManager({"enabled": True})
+        report = {
+            "event_type": "resource_threshold",
+            "timestamp": 1700000000.0,
+            "severity": "high",
+            "hostname": "test-host",
+            "details": "CPU load threshold exceeded",
+            "system_stats": {
+                "cpu": {"load_1min": 15.0},
+                "top_processes": {
+                    "cpu_percent": [{"user": "www-data", "pid": 111, "command": "php-fpm", "cpu_percent": 99.5}],
+                    "cpu_load": [{"user": "root", "pid": 222, "command": "python3", "cpu_core_load": 1.75}],
+                    "memory": [
+                        {
+                            "user": "mysql",
+                            "pid": 333,
+                            "command": "mysqld",
+                            "memory_mb": 2048.0,
+                            "memory_percent": 25.0,
+                        }
+                    ],
+                    "disk_io": [{"user": "root", "pid": 444, "command": "rsync", "read_mb_per_sec": 10.5}],
+                    "network": {
+                        "available": False,
+                        "reason": "Process-level network throughput is unavailable without an optional collector.",
+                        "top": [],
+                    },
+                },
+            },
+        }
+
+        plain_text = manager._format_report_plain("event", report)
+        html_text = manager._format_report_html("event", report)
+
+        assert "Top Processes by CPU %:" in plain_text
+        assert "USER: www-data | PID: 111 | COMMAND: php-fpm | CPU %: 99.5" in plain_text
+        assert "Top Processes by CPU Load (cores):" in plain_text
+        assert "Top Processes by Memory:" in plain_text
+        assert "Top Processes by Disk I/O:" in plain_text
+        assert "Top Processes by Network:" in plain_text
+        assert "Process-level network throughput is unavailable" in plain_text
+
+        assert "<h4>Top Processes by CPU %</h4>" in html_text
+        assert "www-data" in html_text
+        assert "Process-level network throughput is unavailable" in html_text
 
     def test_should_handle_custom_message_exceptions(self, mocker):
         """Test custom message handles channel exceptions."""

@@ -665,6 +665,13 @@ notifications:
   # Enable or disable notifications globally
   enabled: true
 
+  # When a channel enables include_system_stats, alerts include safe top-5
+  # process diagnostics for CPU %, CPU core load, RAM, disk I/O, and
+  # best-effort network throughput. Full command lines are never sent.
+  # Process-level network Mbps requires an optional collector such as nethogs
+  # and enough privileges; otherwise the notification marks that metric as
+  # unavailable instead of guessing.
+
   # Minimum severity to send notifications
   # debug, info, low, medium, high, critical
   min_severity: "info"

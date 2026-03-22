@@ -6,6 +6,14 @@ This format follows Keep a Changelog and uses Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- Notifications: include safe top-5 process diagnostics in service/resource alert system stats for CPU %, CPU core load, RAM, disk I/O, and best-effort per-process network throughput.
+
+### Fixed
+
+- Notifications: keep process diagnostics sanitized to executable name/user/PID and explicitly mark per-process network throughput as unavailable when the optional collector is missing, unprivileged, or returns no valid rows.
+
 ## [1.2.7] - 2026-03-22
 
 ### Changed

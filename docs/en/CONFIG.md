@@ -209,6 +209,15 @@ Each channel (email/telegram/slack/discord/webhook) has:
 - rate_limit override (optional).
 - Telegram chat IDs support topic routing with the format -100XXXX_YYY,
   where YYY is the topic (message_thread_id).
+- When `include_system_stats` is enabled for a channel, event reports also
+  include top-5 process diagnostics for CPU %, CPU core load, RAM MB/RAM %,
+  disk I/O, and best-effort network Mbps.
+- Process diagnostics only expose the executable name, user, PID, and
+  resource counters; full command lines are never included in outbound
+  notifications.
+- Process-level network throughput requires an optional collector such as
+  `nethogs` and sufficient privileges. If unavailable, reports explicitly
+  mark network process throughput as unavailable instead of fabricating data.
 - Telegram, Slack, and Discord reports hide `system_stats.network.interfaces`
   to keep chat messages concise while preserving the rest of `System Stats`.
 - On startup, the daemon sends a shared startup summary to every enabled channel
