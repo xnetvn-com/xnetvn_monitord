@@ -712,6 +712,30 @@ class TestNotificationManagerHelpers:
         assert "action" not in prepared
         assert "system_stats" not in prepared
 
+    def test_should_strip_network_interfaces_for_chat_channels(self):
+        """Test Telegram, Slack, and Discord reports omit per-interface network stats."""
+        manager = NotificationManager({"enabled": True})
+        report = {
+            "system_stats": {
+                "cpu": {"load_1min": 1.0},
+                "network": {
+                    "total": {"bytes_sent": 100, "bytes_recv": 200},
+                    "interfaces": {
+                        "eth0": {"bytes_sent": 10, "bytes_recv": 20},
+                    },
+                },
+            },
+        }
+
+        prepared = manager._prepare_report_for_channel(report, {}, "telegram")
+
+        assert "interfaces" not in prepared["system_stats"]["network"]
+        assert prepared["system_stats"]["network"]["total"] == {
+            "bytes_sent": 100,
+            "bytes_recv": 200,
+        }
+        assert prepared["system_stats"]["cpu"] == {"load_1min": 1.0}
+
     def test_should_build_webhook_payload(self):
         """Test webhook payload wrapper."""
         manager = NotificationManager({"enabled": True})

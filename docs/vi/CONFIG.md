@@ -207,6 +207,8 @@ Mỗi kênh (email/telegram/slack/discord/webhook) có:
 - rate_limit override (tùy chọn).
 - Telegram chat ID hỗ trợ gửi vào topic theo định dạng -100XXXX_YYY,
   trong đó YYY là topic (message_thread_id).
+- Telegram, Slack và Discord sẽ ẩn `system_stats.network.interfaces`
+  để giữ thông báo gọn hơn, nhưng vẫn giữ các phần còn lại của `System Stats`.
 
 Ví dụ Slack:
 

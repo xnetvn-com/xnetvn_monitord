@@ -209,6 +209,8 @@ Each channel (email/telegram/slack/discord/webhook) has:
 - rate_limit override (optional).
 - Telegram chat IDs support topic routing with the format -100XXXX_YYY,
   where YYY is the topic (message_thread_id).
+- Telegram, Slack, and Discord reports hide `system_stats.network.interfaces`
+  to keep chat messages concise while preserving the rest of `System Stats`.
 
 Slack example:
 

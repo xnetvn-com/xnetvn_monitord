@@ -311,7 +311,11 @@ class NotificationManager:
         if self.telegram_notifier:
             if self._should_send_to_channel("telegram", severity, notification_key):
                 try:
-                    event_data = self._prepare_report_for_channel(report, self.config.get("telegram", {}))
+                    event_data = self._prepare_report_for_channel(
+                        report,
+                        self.config.get("telegram", {}),
+                        "telegram",
+                    )
                     message = self._format_report_plain(report_type, event_data)
                     message = self._filter_sensitive_content(message)
                     if self.telegram_notifier.send_notification(message):
@@ -323,7 +327,11 @@ class NotificationManager:
         if self.slack_notifier:
             if self._should_send_to_channel("slack", severity, notification_key):
                 try:
-                    event_data = self._prepare_report_for_channel(report, self.config.get("slack", {}))
+                    event_data = self._prepare_report_for_channel(
+                        report,
+                        self.config.get("slack", {}),
+                        "slack",
+                    )
                     message = self._format_report_plain(report_type, event_data)
                     message = self._filter_sensitive_content(message)
                     if self.slack_notifier.send_notification(message):
@@ -335,7 +343,11 @@ class NotificationManager:
         if self.discord_notifier:
             if self._should_send_to_channel("discord", severity, notification_key):
                 try:
-                    event_data = self._prepare_report_for_channel(report, self.config.get("discord", {}))
+                    event_data = self._prepare_report_for_channel(
+                        report,
+                        self.config.get("discord", {}),
+                        "discord",
+                    )
                     message = self._format_report_plain(report_type, event_data)
                     message = self._filter_sensitive_content(message)
                     if self.discord_notifier.send_notification(message):
@@ -389,12 +401,18 @@ class NotificationManager:
             "report": report,
         }
 
-    def _prepare_report_for_channel(self, report: Dict, channel_config: Dict) -> Dict:
+    def _prepare_report_for_channel(
+        self,
+        report: Dict,
+        channel_config: Dict,
+        channel_name: Optional[str] = None,
+    ) -> Dict:
         """Prepare a report for a specific channel.
 
         Args:
             report: Original report payload.
             channel_config: Channel configuration.
+            channel_name: Optional notification channel name.
 
         Returns:
             Sanitized report payload.
@@ -406,7 +424,27 @@ class NotificationManager:
             report_copy.pop("action", None)
         if not channel_config.get("include_details", True):
             report_copy.pop("details", None)
+
+        if channel_name in {"telegram", "slack", "discord"}:
+            self._remove_network_interfaces(report_copy)
+
         return report_copy
+
+    def _remove_network_interfaces(self, report: Dict) -> None:
+        """Remove per-interface network stats from a report in place.
+
+        Args:
+            report: Report payload to sanitize.
+        """
+        system_stats = report.get("system_stats")
+        if not isinstance(system_stats, dict):
+            return
+
+        network_stats = system_stats.get("network")
+        if not isinstance(network_stats, dict):
+            return
+
+        network_stats.pop("interfaces", None)
 
     def _format_report_plain(self, report_type: str, report: Dict) -> str:
         """Format report in plain text.
