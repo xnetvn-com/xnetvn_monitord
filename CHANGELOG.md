@@ -14,6 +14,12 @@ This format follows Keep a Changelog and uses Semantic Versioning.
 
 - Notifications: keep process diagnostics sanitized to executable name/user/PID and explicitly mark per-process network throughput as unavailable when the optional collector is missing, unprivileged, or returns no valid rows.
 
+## [1.3.0] - 2026-03-23
+
+### Changed
+
+- Release: bump package to v1.3.0, align release/install examples with tag-driven publication, and refresh release metadata.
+
 ## [1.2.7] - 2026-03-22
 
 ### Changed
