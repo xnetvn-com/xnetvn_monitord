@@ -190,6 +190,29 @@ class ServiceMonitor:
 
         return status
 
+    def _get_http_targets(self, service_config: Dict) -> List[str]:
+        """Normalize HTTP target configuration into a list of URLs.
+
+        Args:
+            service_config: Service configuration dictionary.
+
+        Returns:
+            A normalized list of configured HTTP targets.
+        """
+        raw_targets = service_config.get("url")
+        if isinstance(raw_targets, (list, tuple)):
+            return [str(target).strip() for target in raw_targets if str(target).strip()]
+
+        if isinstance(raw_targets, str):
+            normalized_target = raw_targets.strip()
+            return [normalized_target] if normalized_target else []
+
+        if raw_targets is None:
+            return []
+
+        normalized_target = str(raw_targets).strip()
+        return [normalized_target] if normalized_target else []
+
     def _get_service_key(self, service_config: Dict) -> str:
         """Resolve the unique key for a service.
 
@@ -199,11 +222,12 @@ class ServiceMonitor:
         Returns:
             Unique key representing the service.
         """
+        http_targets = self._get_http_targets(service_config)
         return (
             service_config.get("name")
             or service_config.get("service_name")
             or service_config.get("process_name")
-            or service_config.get("url")
+            or "|".join(redact_url_for_logs(target, include_path=True) for target in http_targets)
             or "unknown_service"
         )
 
@@ -574,20 +598,23 @@ class ServiceMonitor:
             logger.error(f"Error running iptables check: {str(e)}")
             return False
 
-    def _check_http(self, service_config: Dict) -> Dict:
-        """Check a web endpoint via HTTP/HTTPS.
+    def _check_http_target(self, service_config: Dict, url: str) -> Dict:
+        """Check a single HTTP/HTTPS target.
 
         Args:
             service_config: Service configuration dictionary.
+            url: HTTP target URL.
 
         Returns:
-            Dictionary containing HTTP status and response timing.
+            Dictionary containing HTTP status and response timing for one target.
         """
-        url = service_config.get("url")
-        if not url:
-            return {"running": False, "message": "Missing URL for HTTP check"}
+        target_label = redact_url_for_logs(url, include_path=True)
         if not is_http_url(url):
-            return {"running": False, "message": "Invalid URL scheme for HTTP check"}
+            return {
+                "running": False,
+                "message": "Invalid URL scheme for HTTP check",
+                "target": target_label,
+            }
 
         timeout_seconds = service_config.get("timeout_seconds", 10)
         expected_codes = service_config.get("expected_status_codes") or [200, 204, 301, 302]
@@ -595,7 +622,6 @@ class ServiceMonitor:
         http_method = service_config.get("http_method", "GET").upper()
         headers = service_config.get("headers", {})
         verify_tls = service_config.get("verify_tls", True)
-        target_label = redact_url_for_logs(url, include_path=True)
 
         request = urllib.request.Request(url, method=http_method, headers=headers)
         context = None
@@ -635,6 +661,7 @@ class ServiceMonitor:
                         "message": f"Slow response: {elapsed_ms:.0f}ms",
                         "status_code": status_code,
                         "response_time_ms": elapsed_ms,
+                        "target": target_label,
                     }
 
                 if status_code not in expected_codes:
@@ -656,6 +683,7 @@ class ServiceMonitor:
                         "message": f"Unexpected HTTP status: {status_code}",
                         "status_code": status_code,
                         "response_time_ms": elapsed_ms,
+                        "target": target_label,
                     }
 
                 return {
@@ -663,6 +691,7 @@ class ServiceMonitor:
                     "message": f"HTTP {status_code} ({elapsed_ms:.0f}ms)",
                     "status_code": status_code,
                     "response_time_ms": elapsed_ms,
+                    "target": target_label,
                 }
         except urllib.error.HTTPError as e:
             elapsed_ms = (time.monotonic() - start_time) * 1000
@@ -683,6 +712,7 @@ class ServiceMonitor:
                 "message": f"HTTP error: {e.code}",
                 "status_code": e.code,
                 "response_time_ms": elapsed_ms,
+                "target": target_label,
             }
         except (urllib.error.URLError, socket.timeout) as e:
             elapsed_ms = (time.monotonic() - start_time) * 1000
@@ -698,6 +728,7 @@ class ServiceMonitor:
                 "running": False,
                 "message": f"Connection error: {str(e)}",
                 "response_time_ms": elapsed_ms,
+                "target": target_label,
             }
         except ProxyConfigurationError as e:
             proxy_config = service_config.get("proxy", self.proxy_config)
@@ -715,7 +746,55 @@ class ServiceMonitor:
                 "running": False,
                 "message": f"Proxy configuration error ({proxy_label}): {str(e)}",
                 "response_time_ms": (time.monotonic() - start_time) * 1000,
+                "target": target_label,
             }
+
+    def _check_http(self, service_config: Dict) -> Dict:
+        """Check one or more web endpoints via HTTP/HTTPS.
+
+        Args:
+            service_config: Service configuration dictionary.
+
+        Returns:
+            Dictionary containing HTTP status and response timing.
+        """
+        targets = self._get_http_targets(service_config)
+        if not targets:
+            return {"running": False, "message": "Missing URL for HTTP check"}
+
+        condition = str(service_config.get("condition", "or") or "or").strip().lower()
+        if condition not in {"or", "and"}:
+            condition = "or"
+
+        url_results = [self._check_http_target(service_config, target) for target in targets]
+        if len(url_results) == 1:
+            result = dict(url_results[0])
+            result["condition"] = condition
+            result["url_results"] = url_results
+            return result
+
+        failure_count = sum(1 for result in url_results if not result.get("running", False))
+        success_count = len(url_results) - failure_count
+        is_running = success_count > 0 if condition == "and" else failure_count == 0
+
+        if is_running:
+            if condition == "and" and failure_count:
+                message = f"{success_count}/{len(url_results)} targets healthy (condition=and)"
+            else:
+                message = f"All {len(url_results)} targets healthy (condition={condition})"
+        elif condition == "and":
+            message = f"All {len(url_results)} targets failed (condition=and)"
+        else:
+            message = f"{failure_count}/{len(url_results)} targets failed (condition=or)"
+
+        return {
+            "running": is_running,
+            "message": message,
+            "condition": condition,
+            "url_results": url_results,
+            "successful_targets": success_count,
+            "failed_targets": failure_count,
+        }
 
     def _handle_service_failure(self, service_config: Dict, status: Dict) -> Optional[Dict]:
         """Handle a failed service check.
