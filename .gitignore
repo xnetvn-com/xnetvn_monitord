@@ -76,6 +76,11 @@ htmlcov/
 # Documentation
 docs/_build/
 site/
+.github/**/*.md
+.github/agents/
+.github/hooks/
+.github/instructions/
+.github/prompts/
 
 # Package files
 *.tar.gz
