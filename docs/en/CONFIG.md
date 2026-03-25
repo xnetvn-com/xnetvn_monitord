@@ -174,8 +174,16 @@ resource_monitor:
 
 - Both paths (string) and mount_points (dict) are supported for backward
   compatibility.
-- action_on_threshold appears in main.example.yaml but is not used in the
-  current codebase.
+- action_on_threshold is active and supports three values:
+  - notify: preserve the existing low-disk recovery flow without filesystem cleanup.
+  - cleanup: execute quarantine-based cleanup only.
+  - both: execute quarantine-based cleanup first, then restart low_disk_services.
+- disk.cleanup enables quarantine-first cleanup with exact/regex/glob selectors,
+  minimum age/size rules, protected path enforcement, same-filesystem quarantine
+  validation, and bounded scan limits for low server overhead.
+- Quarantined items are recorded in JSON manifests under the quarantine
+  directory so operators can restore one manifest or the full quarantine set
+  before any later purge step.
 
 ## recovery_actions
 
@@ -192,6 +200,8 @@ resource_monitor:
 
 - cooldown_period applies per action_type.
 - ResourceMonitor restarts services from these lists when thresholds are exceeded.
+- low_disk_services are executed for disk alerts in notify mode and after
+  cleanup in both mode.
 
 ## notifications
 

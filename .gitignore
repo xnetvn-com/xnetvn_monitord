@@ -12,6 +12,7 @@ eggs/
 .eggs/
 lib/
 lib64/
+.worktrees/
 parts/
 sdist/
 var/

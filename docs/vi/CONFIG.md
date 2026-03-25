@@ -172,8 +172,15 @@ resource_monitor:
 ```
 
 - Hỗ trợ paths (chuỗi) và mount_points (dict) để tương thích cấu hình cũ.
-- action_on_threshold xuất hiện trong main.example.yaml nhưng chưa được sử dụng
-  trong mã nguồn hiện tại.
+- action_on_threshold đã được kích hoạt và hỗ trợ ba giá trị:
+  - notify: giữ luồng low-disk recovery hiện có, không dọn dẹp filesystem.
+  - cleanup: chỉ chạy cleanup theo cơ chế quarantine.
+  - both: chạy cleanup theo cơ chế quarantine trước, sau đó restart low_disk_services.
+- disk.cleanup hỗ trợ cleanup theo kiểu quarantine-first với bộ lọc exact/regex/glob,
+  điều kiện tuổi/kích thước tối thiểu, danh sách protected paths, kiểm tra cùng
+  filesystem cho quarantine, và giới hạn thời gian quét để giảm tải server.
+- Các mục bị quarantine được ghi vào JSON manifest trong quarantine directory để
+  operator có thể restore theo từng manifest hoặc restore toàn bộ trước khi purge.
 
 ## recovery_actions
 
@@ -190,6 +197,8 @@ resource_monitor:
 
 - cooldown_period áp dụng cho từng action_type.
 - ResourceMonitor sẽ restart services theo danh sách này khi vượt ngưỡng.
+- low_disk_services sẽ chạy cho cảnh báo disk ở chế độ notify và sẽ chạy sau
+  cleanup ở chế độ both.
 
 ## notifications
 

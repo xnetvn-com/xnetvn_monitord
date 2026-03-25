@@ -19,12 +19,15 @@ This module provides shared fixtures and configuration for all tests.
 
 import logging
 import os
+import sys
 import tempfile
 from pathlib import Path
 from typing import Dict, Generator
 
 import pytest
 import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 
 @pytest.fixture(scope="session")

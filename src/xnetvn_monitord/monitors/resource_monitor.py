@@ -28,6 +28,11 @@ from typing import Any, Dict, List, Optional
 
 import psutil
 
+from xnetvn_monitord.monitors.disk_cleanup import (
+    normalize_cleanup_config,
+    quarantine_cleanup_candidates,
+    scan_cleanup_candidates,
+)
 from xnetvn_monitord.utils.service_manager import ServiceManager
 
 logger = logging.getLogger(__name__)
@@ -97,7 +102,7 @@ class ResourceMonitor:
                 disk_result = self._check_disk(disk_config)
                 results["disk"] = disk_result
                 if disk_result.get("threshold_exceeded"):
-                    action_result = self._handle_low_disk()
+                    action_result = self._handle_low_disk(disk_result)
                     results["actions_taken"].append("low_disk_recovery")
                     if action_result:
                         results["action_results"].append(action_result)
@@ -433,27 +438,95 @@ class ResourceMonitor:
             },
         }
 
-    def _handle_low_disk(self) -> Optional[Dict]:
-        """Handle low disk space by restarting configured services."""
+    def _handle_low_disk(self, disk_result: Optional[Dict] = None) -> Optional[Dict]:
+        """Handle low disk space with optional cleanup and service recovery."""
         if not self._check_action_cooldown("low_disk"):
             logger.info("Low disk recovery is in cooldown period")
             return None
 
         logger.info("Executing low disk recovery actions")
+        disk_config = self.config.get("disk", {})
+        action_on_threshold = str(disk_config.get("action_on_threshold", "notify")).lower()
         recovery_config = self.config.get("recovery_actions", {})
-        services = recovery_config.get("low_disk_services", [])
-        service_results = self._restart_services(services, recovery_config)
+        service_results: List[Dict[str, Any]] = []
+        cleanup_result: Optional[Dict[str, Any]] = None
+
+        if action_on_threshold in {"cleanup", "both"}:
+            cleanup_result = self._execute_disk_cleanup(disk_result or {"mount_points": []})
+
+        if action_on_threshold in {"notify", "both"}:
+            services = recovery_config.get("low_disk_services", [])
+            service_results = self._restart_services(services, recovery_config)
+
         self._update_action_cooldown("low_disk")
-        success = all(result.get("success", False) for result in service_results) if service_results else True
+        success = True
+        if cleanup_result is not None:
+            success = success and cleanup_result.get("success", False)
+        if service_results:
+            success = success and all(result.get("success", False) for result in service_results)
 
         return {
             "action": "low_disk_recovery",
             "timestamp": time.time(),
             "success": success,
             "details": {
+                "cleanup": cleanup_result,
                 "services": service_results,
             },
         }
+
+    def _execute_disk_cleanup(self, disk_result: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute disk cleanup for mount points that exceeded configured thresholds."""
+        disk_config = self.config.get("disk", {})
+        cleanup_config = disk_config.get("cleanup", {})
+        if not cleanup_config.get("enabled", False):
+            return {
+                "success": False,
+                "mounts": [],
+                "errors": ["Disk cleanup is not enabled"],
+            }
+
+        normalized_cleanup_config = normalize_cleanup_config(cleanup_config)
+        mount_results: List[Dict[str, Any]] = []
+        errors: List[str] = []
+        current_time = time.time()
+
+        for index, mount_point in enumerate(disk_result.get("mount_points", []), start=1):
+            if not mount_point.get("threshold_exceeded"):
+                continue
+
+            mount_path = mount_point.get("path")
+            if not mount_path:
+                continue
+
+            try:
+                candidates = scan_cleanup_candidates(
+                    mount_path,
+                    normalized_cleanup_config,
+                    current_time=current_time,
+                )
+                quarantine_result = quarantine_cleanup_candidates(
+                    candidates,
+                    normalized_cleanup_config,
+                    mount_point=mount_path,
+                    run_id=f"disk-cleanup-{int(current_time)}-{index}",
+                    current_time=current_time,
+                )
+                mount_results.append(
+                    {
+                        "path": mount_path,
+                        "candidates_found": len(candidates),
+                        "quarantined_count": len(quarantine_result.get("quarantined", [])),
+                        "errors": quarantine_result.get("errors", []),
+                        "manifest_path": quarantine_result.get("manifest_path"),
+                    }
+                )
+            except Exception as exc:
+                logger.error("Error executing disk cleanup for %s: %s", mount_path, str(exc))
+                errors.append(f"{mount_path}: {str(exc)}")
+
+        success = not errors and all(not item.get("errors") for item in mount_results)
+        return {"success": success, "mounts": mount_results, "errors": errors}
 
     def _restart_services(self, services: List[str], config: Dict) -> List[Dict]:
         """Restart a list of services.
