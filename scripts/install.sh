@@ -545,8 +545,11 @@ copy_files() {
     if [ -f "$SOURCE_DIR/scripts/update.sh" ]; then
         mkdir -p "$INSTALL_DIR/scripts"
         cp "$SOURCE_DIR/scripts/update.sh" "$INSTALL_DIR/scripts/update.sh"
+        cp "$SOURCE_DIR/scripts/restore_quarantine.sh" "$INSTALL_DIR/scripts/restore_quarantine.sh"
         chmod 755 "$INSTALL_DIR/scripts/update.sh"
+        chmod 755 "$INSTALL_DIR/scripts/restore_quarantine.sh"
         log_info "Update script copied to $INSTALL_DIR/scripts/update.sh"
+        log_info "Restore script copied to $INSTALL_DIR/scripts/restore_quarantine.sh"
     else
         log_warning "Update script not found in source"
     fi

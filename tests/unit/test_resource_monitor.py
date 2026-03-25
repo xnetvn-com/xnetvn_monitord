@@ -19,9 +19,13 @@ monitoring functionality.
 """
 
 import subprocess
+import sys
 import time
+from pathlib import Path
 
-from xnetvn_monitord.monitors.resource_monitor import ResourceMonitor
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+
+from xnetvn_monitord.monitors.resource_monitor import ResourceMonitor  # noqa: E402
 
 
 class TestResourceMonitorInitialization:
@@ -852,6 +856,103 @@ class TestResourceMonitorAdditionalCoverage:
         monitor.last_action_time["low_disk"] = time.time()
 
         assert monitor._handle_low_disk() is None
+
+    def test_should_execute_disk_cleanup_without_restarting_services_in_cleanup_mode(self, mocker):
+        """Test cleanup mode runs disk cleanup but skips service restarts."""
+        monitor = ResourceMonitor(
+            {
+                "enabled": True,
+                "disk": {
+                    "action_on_threshold": "cleanup",
+                    "cleanup": {"enabled": True},
+                },
+                "recovery_actions": {"low_disk_services": ["mysql"]},
+            }
+        )
+        cleanup_result = {"success": True, "mounts": [{"path": "/", "candidates_found": 1, "quarantined_count": 1}]}
+        cleanup_mock = mocker.patch.object(monitor, "_execute_disk_cleanup", return_value=cleanup_result)
+        restart_mock = mocker.patch.object(monitor, "_restart_services", return_value=[{"success": True}])
+
+        result = monitor._handle_low_disk({"mount_points": [{"path": "/", "threshold_exceeded": True}]})
+
+        cleanup_mock.assert_called_once()
+        restart_mock.assert_not_called()
+        assert result["details"]["cleanup"] == cleanup_result
+        assert result["details"]["services"] == []
+
+    def test_should_execute_disk_cleanup_and_restart_services_in_both_mode(self, mocker):
+        """Test both mode runs disk cleanup and service restarts."""
+        monitor = ResourceMonitor(
+            {
+                "enabled": True,
+                "disk": {
+                    "action_on_threshold": "both",
+                    "cleanup": {"enabled": True},
+                },
+                "recovery_actions": {"low_disk_services": ["mysql"]},
+            }
+        )
+        cleanup_result = {"success": True, "mounts": [{"path": "/", "candidates_found": 1, "quarantined_count": 1}]}
+        cleanup_mock = mocker.patch.object(monitor, "_execute_disk_cleanup", return_value=cleanup_result)
+        restart_mock = mocker.patch.object(monitor, "_restart_services", return_value=[{"success": True}])
+
+        result = monitor._handle_low_disk({"mount_points": [{"path": "/", "threshold_exceeded": True}]})
+
+        cleanup_mock.assert_called_once()
+        restart_mock.assert_called_once_with(["mysql"], {"low_disk_services": ["mysql"]})
+        assert result["details"]["cleanup"] == cleanup_result
+        assert result["details"]["services"] == [{"success": True}]
+
+    def test_should_return_cleanup_disabled_error_when_cleanup_not_enabled(self):
+        """Disabled cleanup configuration should return a structured failure result."""
+        monitor = ResourceMonitor({"enabled": True, "disk": {"cleanup": {"enabled": False}}})
+
+        result = monitor._execute_disk_cleanup({"mount_points": [{"path": "/", "threshold_exceeded": True}]})
+
+        assert result == {"success": False, "mounts": [], "errors": ["Disk cleanup is not enabled"]}
+
+    def test_should_skip_mounts_without_threshold_or_path_when_executing_cleanup(self, mocker):
+        """Cleanup orchestration should ignore mount entries that are not actionable."""
+        monitor = ResourceMonitor(
+            {
+                "enabled": True,
+                "disk": {"cleanup": {"enabled": True, "mode": "quarantine_then_delete", "quarantine_dir": "/tmp/q"}},
+            }
+        )
+        scan_mock = mocker.patch("xnetvn_monitord.monitors.resource_monitor.scan_cleanup_candidates")
+        quarantine_mock = mocker.patch("xnetvn_monitord.monitors.resource_monitor.quarantine_cleanup_candidates")
+
+        result = monitor._execute_disk_cleanup(
+            {
+                "mount_points": [
+                    {"path": "/", "threshold_exceeded": False},
+                    {"threshold_exceeded": True},
+                ]
+            }
+        )
+
+        scan_mock.assert_not_called()
+        quarantine_mock.assert_not_called()
+        assert result == {"success": True, "mounts": [], "errors": []}
+
+    def test_should_record_cleanup_execution_errors_per_mount(self, mocker):
+        """Cleanup orchestration should surface per-mount exceptions in a structured way."""
+        monitor = ResourceMonitor(
+            {
+                "enabled": True,
+                "disk": {"cleanup": {"enabled": True, "mode": "quarantine_then_delete", "quarantine_dir": "/tmp/q"}},
+            }
+        )
+        mocker.patch(
+            "xnetvn_monitord.monitors.resource_monitor.scan_cleanup_candidates",
+            side_effect=RuntimeError("scan failed"),
+        )
+
+        result = monitor._execute_disk_cleanup({"mount_points": [{"path": "/", "threshold_exceeded": True}]})
+
+        assert result["success"] is False
+        assert result["mounts"] == []
+        assert result["errors"] == ["/: scan failed"]
 
     def test_should_handle_restart_services_exception(self, mocker):
         """Test restart services handles generic exceptions."""

@@ -648,8 +648,75 @@ resource_monitor:
     free_gb_threshold: 5.0
     # Minimum free MB threshold
     free_mb_threshold: 1024
-    # Action on low disk: notify, cleanup, both
+    # Action on low disk.
+    # Supported values:
+    #   - notify: keep the existing low-disk recovery flow without filesystem cleanup.
+    #   - cleanup: run the quarantine-based cleanup flow only.
+    #   - both: run quarantine-based cleanup first, then execute low_disk_services.
     action_on_threshold: "notify"
+
+    # Quarantine-first disk cleanup settings.
+    # Cleanup is only attempted when action_on_threshold is set to "cleanup" or "both".
+    cleanup:
+      # Enable or disable automatic cleanup for low-disk events.
+      enabled: false
+      # Cleanup mode.
+      # Supported values:
+      #   - quarantine_then_delete: move matching files/directories into quarantine first.
+      #     Permanent deletion must only happen later from inside quarantine.
+      mode: "quarantine_then_delete"
+      # Absolute path of the quarantine directory.
+      # This directory stores moved items plus JSON manifests used for restore operations.
+      quarantine_dir: "/opt/xnetvn_monitord/.local/quarantine"
+      # Allow directory candidates in addition to files.
+      # Supported values:
+      #   - false: only individual files may be quarantined.
+      #   - true: matched directories may also be quarantined as a whole tree.
+      allow_directories: false
+      # Hard cap on how many matching candidates one cleanup run may quarantine.
+      max_items_per_run: 100
+      # Hard cap on how long one cleanup scan may spend walking the filesystem.
+      # Keep this low to reduce CPU, I/O, and metadata pressure on busy servers.
+      max_runtime_seconds: 30
+
+      # Path selector rules.
+      # Matching is applied against normalized absolute paths.
+      selectors:
+        # Include selectors define which paths are eligible for cleanup.
+        include:
+          # Selector type.
+          # Supported values:
+          #   - exact: path must match the pattern exactly.
+          #   - regex: Python regular expression matched against the normalized absolute path.
+          #   - glob: shell-style glob matched against the normalized absolute path.
+          - type: "glob"
+            # Example: recursively match cache files below /var/cache/app.
+            pattern: "/var/cache/app/**/*.tmp"
+        # Exclude selectors short-circuit traversal and cleanup for matching paths.
+        exclude:
+          - type: "exact"
+            pattern: "/var/cache/app/keep"
+
+      # Candidate qualification rules.
+      rules:
+        # File system object types that may be quarantined.
+        # Supported values inside the list: file, directory
+        file_types:
+          - "file"
+        # Minimum candidate age in days based on last modification time.
+        min_age_days: 7
+        # Minimum candidate size in megabytes.
+        min_size_mb: 10
+
+      # Safety controls.
+      safety:
+        # Require the quarantine directory to live on the same filesystem device as the target mount.
+        # This keeps restore semantics predictable and avoids cross-device move surprises.
+        require_quarantine_same_filesystem: true
+        # Additional absolute paths that must never be scanned or quarantined.
+        # Built-in Linux safety paths are enforced automatically even when this list is empty.
+        protected_paths:
+          - "/var/lib/mysql"
 
   # Resource recovery actions
   recovery_actions:
