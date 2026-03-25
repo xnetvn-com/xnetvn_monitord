@@ -21,9 +21,7 @@ This format follows Keep a Changelog and uses Semantic Versioning.
 
 ## [Unreleased]
 
-### Added
-
-- None.
+## [1.4.0] - 2026-03-25
 
 ### Changed
 

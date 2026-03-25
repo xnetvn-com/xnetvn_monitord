@@ -21,9 +21,7 @@ Tất cả các thay đổi quan trọng của dự án sẽ được ghi ở đ
 
 ## [Unreleased]
 
-### Added
-
-- Chưa có.
+## [1.4.0] - 2026-03-25
 
 ### Changed
 

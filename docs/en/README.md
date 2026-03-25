@@ -79,7 +79,7 @@ Override auto-detection with `XNETVN_SERVICE_MANAGER` (`systemd`, `openrc`, or
 - Production install via script (Debian/Ubuntu only, as the script uses apt-get):
     - `sudo bash scripts/install.sh` installs from the current local repository directory.
     - `sudo bash scripts/install.sh --releases=latest` installs from the latest GitHub release.
-    - `sudo bash scripts/install.sh --releases=v1.3.0` installs from a specific GitHub release tag.
+    - `sudo bash scripts/install.sh --releases=v1.4.0` installs from a specific GitHub release tag.
 - Dev/test install: see docs/en/INSTALL.md.
 - Other distributions: install manually following INSTALL.md.
 

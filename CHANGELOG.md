@@ -6,6 +6,8 @@ This format follows Keep a Changelog and uses Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-03-25
+
 ### Changed
 
 - Notifications: include safe top-5 process diagnostics in service/resource alert system stats for CPU %, CPU core load, RAM, disk I/O, and best-effort per-process network throughput.
