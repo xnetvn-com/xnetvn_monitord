@@ -166,6 +166,9 @@ service_monitor:
   # - check_command/check_timeout: Custom command and timeout (custom_command only)
   # - url/http_method/headers/timeout_seconds/expected_status_codes/
   #   max_response_time_ms/verify_tls: HTTP/HTTPS health checks
+  #   `url` accepts a single string or a list of URLs.
+  # - condition: URL failure logic for multi-target HTTP/HTTPS checks
+  #   `or` = any failed URL triggers recovery, `and` = all URLs must fail
   # - restart_command: Recovery command to execute on failure.
   #   Supports a single command string or a list of commands executed in order.
   #   External scripts are supported (bash/php/python, etc.).
@@ -448,8 +451,15 @@ service_monitor:
       # proxy:
       #   enabled: true
       #   uri: "${PROXY_URI}"
-      # Target URL for health check
-      url: "https://example.com/health"
+      # Target URL for health check.
+      # Supports a single URL string or a list of URLs.
+      url:
+        - "https://example-01.com/health"
+        - "https://example-02.com/zhealth"
+      # URL failure logic when multiple targets are configured:
+      # or  -> any failed target triggers recovery
+      # and -> all targets must fail before recovery runs
+      condition: "or"
       # HTTP method: GET, HEAD, POST, ...
       http_method: "GET"
       # Optional request headers

@@ -791,6 +791,89 @@ class TestServiceMonitorHttpCheck:
         assert result["running"] is True
         assert open_url_mock.call_args[0][3] == service_config["proxy"]
 
+    def test_should_restart_when_any_url_fails_with_or_condition(self, mocker):
+        """Test OR condition treats any failed target as a service failure."""
+        success_response = MagicMock()
+        success_response.getcode.return_value = 200
+        success_response.__enter__.return_value = success_response
+        mocker.patch(
+            "xnetvn_monitord.monitors.service_monitor.open_url",
+            side_effect=[success_response, urllib.error.URLError("connection failed")],
+        )
+        mocker.patch("time.monotonic", side_effect=[0, 0.1, 1, 1.1])
+
+        restart_mock = mocker.patch.object(ServiceMonitor, "_restart_service", return_value=True)
+        mocker.patch.object(ServiceMonitor, "_check_action_readiness", return_value=(True, "Action allowed"))
+
+        monitor = ServiceMonitor(
+            {
+                "enabled": True,
+                "action_on_failure": "restart",
+                "services": [
+                    {
+                        "name": "web",
+                        "enabled": True,
+                        "check_method": "https",
+                        "url": [
+                            "https://example-01.com/health",
+                            "https://example-02.com/zhealth",
+                        ],
+                        "condition": "or",
+                        "restart_command": "systemctl restart nginx",
+                    }
+                ],
+            }
+        )
+
+        results = monitor.check_all_services()
+
+        assert len(results) == 1
+        assert results[0]["running"] is False
+        assert results[0]["http_status"]["condition"] == "or"
+        assert len(results[0]["http_status"]["url_results"]) == 2
+        restart_mock.assert_called_once()
+
+    def test_should_not_restart_when_one_url_succeeds_with_and_condition(self, mocker):
+        """Test AND condition requires all targets to fail before recovery runs."""
+        success_response = MagicMock()
+        success_response.getcode.return_value = 200
+        success_response.__enter__.return_value = success_response
+        mocker.patch(
+            "xnetvn_monitord.monitors.service_monitor.open_url",
+            side_effect=[success_response, urllib.error.URLError("connection failed")],
+        )
+        mocker.patch("time.monotonic", side_effect=[0, 0.1, 1, 1.1])
+
+        restart_mock = mocker.patch.object(ServiceMonitor, "_restart_service", return_value=True)
+
+        monitor = ServiceMonitor(
+            {
+                "enabled": True,
+                "action_on_failure": "restart",
+                "services": [
+                    {
+                        "name": "web",
+                        "enabled": True,
+                        "check_method": "https",
+                        "url": [
+                            "https://example-01.com/health",
+                            "https://example-02.com/zhealth",
+                        ],
+                        "condition": "and",
+                        "restart_command": "systemctl restart nginx",
+                    }
+                ],
+            }
+        )
+
+        results = monitor.check_all_services()
+
+        assert len(results) == 1
+        assert results[0]["running"] is True
+        assert results[0]["http_status"]["condition"] == "and"
+        assert len(results[0]["http_status"]["url_results"]) == 2
+        restart_mock.assert_not_called()
+
 
 class TestServiceMonitorCheckAllServices:
     """Tests for checking all configured services."""
@@ -1007,6 +1090,25 @@ class TestServiceMonitorIntervals:
 
         assert should_check is True
         assert monitor.last_check_time["nginx"] == 1000
+
+    def test_should_track_interval_for_multi_url_service_without_name(self, mocker):
+        """Test scheduling uses a stable key for multi-URL services without a name."""
+        monitor = ServiceMonitor({"enabled": True})
+        mocker.patch("time.time", return_value=1000)
+
+        service_config = {
+            "check_method": "https",
+            "url": [
+                "https://example-01.com/health",
+                "https://example-02.com/zhealth",
+            ],
+            "check_interval": {"value": 10, "unit": "seconds"},
+        }
+
+        should_check = monitor._should_check_service(service_config)
+
+        assert should_check is True
+        assert list(monitor.last_check_time.values()) == [1000]
 
 
 class TestServiceMonitorCheckService:

@@ -121,5 +121,12 @@ jobs:
           sarif_file: bandit-results.sarif
           category: bandit
 
-      - name: Pip Audit
-        run: pip-audit -r requirements.txt -r requirements-dev.txt
+      - name: Pip Audit (runtime)
+        run: pip-audit -r requirements.txt
+
+      - name: Pip Audit (development tooling)
+        run: |
+          # CVE-2026-4539 / GHSA-5239-wwwm-4pmq currently has no fixed Pygments release.
+          # Production requirements do not include Pygments, so keep runtime auditing strict
+          # and temporarily ignore this local-access-only advisory for dev tooling only.
+          pip-audit -r requirements-dev.txt --ignore-vuln CVE-2026-4539
