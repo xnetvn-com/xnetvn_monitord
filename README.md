@@ -69,7 +69,7 @@ sudo bash scripts/install.sh
 sudo bash scripts/install.sh --releases=latest
 
 # Install from a specific GitHub release tag
-sudo bash scripts/install.sh --releases=v1.4.0
+sudo bash scripts/install.sh --releases=v1.5.0
 
 # Note (Ubuntu 24 LTS / PEP 668): the installer uses
 # /opt/xnetvn_monitord/.venv for Python packages.

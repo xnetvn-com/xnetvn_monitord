@@ -79,7 +79,7 @@ Có thể override cơ chế auto-detect bằng biến môi trường XNETVN_SER
 - Cài đặt production bằng script (Debian/Ubuntu do script dùng apt-get):
 	- `sudo bash scripts/install.sh` để cài từ thư mục source local hiện tại của repo.
 	- `sudo bash scripts/install.sh --releases=latest` để cài từ bản GitHub release mới nhất.
-	- `sudo bash scripts/install.sh --releases=v1.4.0` để cài từ một release tag cụ thể.
+	- `sudo bash scripts/install.sh --releases=v1.5.0` để cài từ một release tag cụ thể.
 - Cài đặt dev/test xem chi tiết tại docs/vi/INSTALL.md.
 - Hệ điều hành khác: cài đặt thủ công theo hướng dẫn trong INSTALL.md.
 
