@@ -34,4 +34,5 @@ def test_update_dry_run(tmp_path):
     assert proc.returncode == 0
     assert "Dry-run: would create backup directory" in proc.stdout
     assert "Dry-run: would download release tarball" in proc.stdout
+    assert "Dry-run: would refresh helper script" in proc.stdout
     assert "Update applied successfully" in proc.stdout

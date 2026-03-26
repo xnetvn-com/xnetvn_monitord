@@ -404,13 +404,15 @@ class UpdateChecker:
 
                 release_scripts_dir = release_root / "scripts"
                 if release_scripts_dir.exists():
-                    update_script = release_scripts_dir / "update.sh"
-                    if update_script.exists():
-                        scripts_dir = self.install_dir / "scripts"
-                        scripts_dir.mkdir(parents=True, exist_ok=True)
-                        shutil.copy2(update_script, scripts_dir / "update.sh")
-                    else:
-                        logger.warning("Release missing scripts/update.sh")
+                    scripts_dir = self.install_dir / "scripts"
+                    scripts_dir.mkdir(parents=True, exist_ok=True)
+
+                    for script_name in ("update.sh", "restore_quarantine.sh"):
+                        release_script = release_scripts_dir / script_name
+                        if release_script.exists():
+                            shutil.copy2(release_script, scripts_dir / script_name)
+                        else:
+                            logger.warning("Release missing scripts/%s", script_name)
                 else:
                     logger.warning("Release missing scripts directory")
 

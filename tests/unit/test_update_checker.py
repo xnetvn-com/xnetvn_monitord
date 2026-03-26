@@ -211,7 +211,7 @@ class TestUpdateCheckerResults:
 class TestUpdateCheckerApplyUpdate:
     """Tests for applying updates and refreshing example files."""
 
-    def test_should_refresh_update_script_and_example_files_without_overwriting_user_config(
+    def test_should_refresh_update_and_restore_scripts_and_example_files_without_overwriting_user_config(
         self, tmp_path, monkeypatch
     ) -> None:
         """Ensure Python auto-update matches manual updater for core artifacts."""
@@ -225,6 +225,7 @@ class TestUpdateCheckerApplyUpdate:
         scripts_dir = install_dir / "scripts"
         scripts_dir.mkdir()
         (scripts_dir / "update.sh").write_text("#!/usr/bin/env bash\necho old updater\n")
+        (scripts_dir / "restore_quarantine.sh").write_text("#!/usr/bin/env bash\necho old restore\n")
 
         config_dir = install_dir / "config"
         config_dir.mkdir()
@@ -241,6 +242,7 @@ class TestUpdateCheckerApplyUpdate:
         release_scripts = package_root / "scripts"
         release_scripts.mkdir(parents=True)
         (release_scripts / "update.sh").write_text("#!/usr/bin/env bash\necho new updater\n")
+        (release_scripts / "restore_quarantine.sh").write_text("#!/usr/bin/env bash\necho new restore\n")
 
         release_config = package_root / "config"
         release_config.mkdir(parents=True)
@@ -275,6 +277,7 @@ class TestUpdateCheckerApplyUpdate:
         assert checker.apply_update("https://example.com/release.tar.gz") is True
         assert (install_dir / "xnetvn_monitord" / "new.txt").read_text() == "new"
         assert (scripts_dir / "update.sh").read_text() == "#!/usr/bin/env bash\necho new updater\n"
+        assert (scripts_dir / "restore_quarantine.sh").read_text() == "#!/usr/bin/env bash\necho new restore\n"
         assert (config_dir / "main.example.yaml").read_text() == "new example"
         assert (config_dir / ".env.example").read_text() == "new env"
         assert (config_dir / "main.yaml").read_text() == "user-config"

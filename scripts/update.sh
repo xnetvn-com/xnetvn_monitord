@@ -390,6 +390,7 @@ perform_backup() {
 apply_update() {
     local tarball_url="$1"
     local temp_dir
+    local helper_script
     temp_dir="$(mktemp -d)"
     # Only remove temp_dir if it is set and exists; avoid calling `rm -rf ''` or removing unexpected paths
     trap 'if [ -n "${temp_dir-}" ] && [ -d "${temp_dir}" ]; then rm -rf -- "${temp_dir}"; fi' RETURN
@@ -397,6 +398,9 @@ apply_update() {
     if [ "$DRY_RUN" = true ]; then
         log_info "Dry-run: would download release tarball from: $tarball_url"
         log_info "Dry-run: would extract tarball and copy new files into $INSTALL_DIR"
+        for helper_script in update.sh restore_quarantine.sh; do
+            log_info "Dry-run: would refresh helper script: $INSTALL_DIR/scripts/$helper_script"
+        done
         return 0
     fi
 
@@ -477,10 +481,14 @@ PY
     rm -rf "$INSTALL_DIR/xnetvn_monitord"
     cp -a "$source_dir" "$INSTALL_DIR/"
 
-    if [ -f "$release_root/scripts/update.sh" ]; then
+    if [ -d "$release_root/scripts" ]; then
         mkdir -p "$INSTALL_DIR/scripts"
-        cp -a "$release_root/scripts/update.sh" "$INSTALL_DIR/scripts/update.sh"
-        chmod 755 "$INSTALL_DIR/scripts/update.sh"
+        for helper_script in update.sh restore_quarantine.sh; do
+            if [ -f "$release_root/scripts/$helper_script" ]; then
+                cp -a "$release_root/scripts/$helper_script" "$INSTALL_DIR/scripts/$helper_script"
+                chmod 755 "$INSTALL_DIR/scripts/$helper_script"
+            fi
+        done
     fi
     mkdir -p "$CONFIG_DIR"
 
@@ -587,6 +595,9 @@ main() {
     log_info "Update applied successfully"
     if [ -f "$INSTALL_DIR/scripts/update.sh" ]; then
         log_info "Update script refreshed: $INSTALL_DIR/scripts/update.sh"
+    fi
+    if [ -f "$INSTALL_DIR/scripts/restore_quarantine.sh" ]; then
+        log_info "Restore script refreshed: $INSTALL_DIR/scripts/restore_quarantine.sh"
     fi
     log_info "Restart the service to load the new version: systemctl restart $SERVICE_NAME"
 }
