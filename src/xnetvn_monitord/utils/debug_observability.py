@@ -46,6 +46,18 @@ _PROC_SNAPSHOT_FILES = [
     "/proc/diskstats",
     "/proc/net/dev",
 ]
+_SYSTEM_LOG_RELATIVE_PATHS = {
+    "alternatives.log",
+    "auth.log",
+    "audit/audit.log",
+    "cloud-init-output.log",
+    "cloud-init.log",
+    "kern.log",
+    "messages",
+    "syslog",
+}
+_TEXT_SAMPLE_BYTES = 2048
+_MAX_PREVIEW_READ_BYTES = 8192
 _HOST_COMMANDS = [
     ["journalctl", "-n", "200", "--no-pager", "-o", "short-iso"],
     ["ps", "aux"],
@@ -112,7 +124,7 @@ class DebugObservability:
         self.settings = settings
         self.logger = logging.getLogger("xnetvn_monitord.observability")
         self.logger.setLevel(logging.DEBUG)
-        self.logger.propagate = True
+        self.logger.propagate = not self.settings.deep_debug
         self._deep_debug_handler: Optional[logging.Handler] = None
         if self.settings.deep_debug and self.settings.deep_debug_file:
             self._configure_deep_debug_handler()
@@ -200,8 +212,14 @@ class DebugObservability:
         for root_path in self.settings.root_paths:
             root = Path(root_path)
             if root.exists():
-                for path in _iter_readable_files(root):
-                    self.emit_snapshot(source="host_file", snapshot=build_file_snapshot(path))
+                for path in _iter_host_sweep_files(root):
+                    self.emit_snapshot(
+                        source="host_file",
+                        snapshot=build_file_snapshot(
+                            path,
+                            preview_chars=self.settings.preview_chars,
+                        ),
+                    )
 
         if work_dir:
             work_dir_path = Path(work_dir)
@@ -272,12 +290,43 @@ def _iter_readable_files(root: Path) -> Iterable[Path]:
             yield path
 
 
+def _iter_host_sweep_files(root: Path) -> Iterable[Path]:
+    for path in _iter_readable_files(root):
+        if _should_capture_host_file(root, path):
+            yield path
+
+
+def _should_capture_host_file(root: Path, path: Path) -> bool:
+    try:
+        relative_path = path.relative_to(root).as_posix().lower()
+    except ValueError:
+        return False
+
+    return relative_path in _SYSTEM_LOG_RELATIVE_PATHS
+
+
 def _should_capture_content_preview(path: Path) -> bool:
     path_text = path.as_posix().lower()
     return "/var/log/" in path_text or path.name.lower().endswith(".log") or path.name.lower() in _LOG_LIKE_FILENAMES
 
 
-def build_file_snapshot(path: Path, preview_lines: int = 20) -> Dict[str, Any]:
+def _looks_like_text_file(path: Path, sample_size: int = _TEXT_SAMPLE_BYTES) -> bool:
+    try:
+        with path.open("rb") as handle:
+            sample = handle.read(sample_size)
+    except OSError:
+        return False
+
+    if not sample:
+        return True
+    if b"\x00" in sample:
+        return False
+
+    control_bytes = sum(1 for byte in sample if byte < 32 and byte not in {9, 10, 13})
+    return control_bytes / len(sample) < 0.10
+
+
+def build_file_snapshot(path: Path, preview_lines: int = 20, preview_chars: int = 256) -> Dict[str, Any]:
     path = Path(path)
     snapshot: Dict[str, Any] = {
         "path": str(path),
@@ -296,18 +345,26 @@ def build_file_snapshot(path: Path, preview_lines: int = 20) -> Dict[str, Any]:
     except OSError:
         return snapshot
 
-    if path.is_file() and _should_capture_content_preview(path):
+    if path.is_file() and _should_capture_content_preview(path) and _looks_like_text_file(path):
         try:
             with path.open("r", encoding="utf-8", errors="replace") as handle:
                 lines = []
+                remaining_bytes = _MAX_PREVIEW_READ_BYTES
                 for _ in range(preview_lines):
-                    line = handle.readline()
+                    if remaining_bytes <= 0:
+                        break
+
+                    line = handle.readline(remaining_bytes + 1)
                     if not line:
                         break
+
+                    remaining_bytes -= len(line.encode("utf-8", errors="ignore"))
                     stripped = line.rstrip("\n")
                     if stripped:
-                        lines.append(stripped)
-                snapshot["content_preview"] = lines
+                        lines.append(_preview_text(stripped, preview_chars))
+
+                if lines:
+                    snapshot["content_preview"] = lines
         except OSError:
             pass
 

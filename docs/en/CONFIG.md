@@ -74,7 +74,7 @@ Recommended usage:
 Behavior by mode:
 
 - `DEBUG` with `deep_debug: false`: the daemon emits expanded internal observability events into the normal log handlers. These events cover daemon decision paths, retry timing, command stdout/stderr previews, redacted HTTP request/response previews, and resource snapshots gathered directly by `xnetvn_monitord`.
-- `DEBUG` with `deep_debug: true`: keeps the internal observability above and adds a best-effort startup host sweep written to a dedicated deep debug log.
+- `DEBUG` with `deep_debug: true`: observability traffic moves into the dedicated deep debug log instead of the normal handlers and adds a curated startup host sweep written to that same file.
 
 Supported keys:
 
@@ -93,14 +93,15 @@ Environment override:
 Current deep debug startup sweep sources:
 
 - readable `/proc` telemetry snapshots such as load, memory, PSI, disk, and network counters
-- readable files under `/var/log`, with line previews only for log-like files
+- selected core text logs under `/var/log`, currently limited to `syslog`, `messages`, `auth.log`, `kern.log`, `cloud-init.log`, `cloud-init-output.log`, `alternatives.log`, and `audit/audit.log`
 - metadata snapshot for `general.work_dir`
 - best-effort command output from `journalctl`, `ps aux`, `df -h`, `ss -tunap`, `ip -brief addr`, `ip route`, and `systemctl list-units`
 
 Safety boundaries:
 
 - Sensitive values are redacted before logging.
-- HTTP and command bodies are truncated to `general.logging.preview_chars`.
+- HTTP bodies, command previews, and host-log line previews are truncated to `general.logging.preview_chars`.
+- Binary files, `/var/log/journal/*`, and noisy app or web logs outside the curated list are skipped from content capture.
 - Non-log-like files are recorded as metadata snapshots only; their content is not copied into the deep debug log.
 - The same `notifications.content_filter.redact_patterns` and `redact_replacement` settings are reused for observability redaction.
 

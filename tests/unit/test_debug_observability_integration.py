@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from xnetvn_monitord.daemon import MonitorDaemon
 from xnetvn_monitord.monitors.resource_monitor import ResourceMonitor
 from xnetvn_monitord.monitors.service_monitor import ServiceMonitor
@@ -53,8 +55,12 @@ def test_should_capture_startup_host_state_only_when_deep_debug_enabled(mocker, 
     manager_mock = mocker.patch("xnetvn_monitord.daemon.NotificationManager")
     manager_mock.return_value.get_enabled_channels.return_value = []
     mocker.patch("xnetvn_monitord.daemon.configure_debug_observability", return_value=observability)
-    mocker.patch("xnetvn_monitord.daemon.logging.handlers.RotatingFileHandler")
-    mocker.patch("xnetvn_monitord.daemon.logging.StreamHandler")
+    file_handler = logging.NullHandler()
+    file_handler.setLevel(logging.DEBUG)
+    console_handler = logging.NullHandler()
+    console_handler.setLevel(logging.DEBUG)
+    mocker.patch("xnetvn_monitord.daemon.logging.handlers.RotatingFileHandler", return_value=file_handler)
+    mocker.patch("xnetvn_monitord.daemon.logging.StreamHandler", return_value=console_handler)
     mocker.patch("os.makedirs")
 
     daemon = MonitorDaemon("/tmp/config.yaml")
@@ -76,8 +82,12 @@ def test_should_skip_startup_host_state_when_deep_debug_disabled(mocker, tmp_pat
     manager_mock = mocker.patch("xnetvn_monitord.daemon.NotificationManager")
     manager_mock.return_value.get_enabled_channels.return_value = []
     mocker.patch("xnetvn_monitord.daemon.configure_debug_observability", return_value=observability)
-    mocker.patch("xnetvn_monitord.daemon.logging.handlers.RotatingFileHandler")
-    mocker.patch("xnetvn_monitord.daemon.logging.StreamHandler")
+    file_handler = logging.NullHandler()
+    file_handler.setLevel(logging.DEBUG)
+    console_handler = logging.NullHandler()
+    console_handler.setLevel(logging.DEBUG)
+    mocker.patch("xnetvn_monitord.daemon.logging.handlers.RotatingFileHandler", return_value=file_handler)
+    mocker.patch("xnetvn_monitord.daemon.logging.StreamHandler", return_value=console_handler)
     mocker.patch("os.makedirs")
 
     daemon = MonitorDaemon("/tmp/config.yaml")
