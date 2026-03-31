@@ -38,6 +38,31 @@ Primary sections:
 - logging: level, file, rotation.
 - pid_file, work_dir: PID and runtime directory.
 
+
+### general.logging.level
+
+`general.logging.level` controls the minimum severity emitted by the daemon's
+root logger, the rotating file handler, and the stdout console handler. In
+practice, this means the setting affects nearly all module logs that propagate
+through Python's standard logging hierarchy.
+
+- Default value: `INFO`.
+- Supported values: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`.
+- Input is case-insensitive: `info` and `INFO` are treated the same.
+- Invalid values are rejected during configuration loading with a clear
+  `ValueError` on `general.logging.level`.
+
+Recommended usage:
+
+| Level | Use when | Operational tradeoff |
+|------|---------|----------------------|
+| `DEBUG` | Investigating bugs, startup issues, or unexpected monitor behavior | Highest log volume; use temporarily |
+| `INFO` | Normal day-to-day production monitoring | Best default balance of visibility and noise |
+| `WARNING` | You only want anomalous or degraded-but-recoverable events | Hides routine success and lifecycle logs |
+| `ERROR` | You want to focus on failed checks or failed recovery actions only | Can hide early warning signals before incidents escalate |
+| `CRITICAL` | Emergency-only logging during severe incident triage | Too narrow for normal operation |
+
+- The same level is applied to both `/var/log/xnetvn_monitord/monitor.log` and stdout.
 ## network
 
 - only_ipv4: when true, outbound DNS resolution and HTTP calls use IPv4 only.

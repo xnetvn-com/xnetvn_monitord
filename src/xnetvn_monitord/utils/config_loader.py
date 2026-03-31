@@ -25,6 +25,8 @@ from typing import Any, Dict
 import yaml  # type: ignore[import-untyped]
 
 logger = logging.getLogger(__name__)
+VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+
 
 
 class ConfigLoader:
@@ -110,7 +112,38 @@ class ConfigLoader:
             if section not in self.config:
                 logger.warning(f"Missing configuration section: {section}")
 
+        self._validate_logging_config()
+
         logger.debug("Configuration validation passed")
+
+    def _validate_logging_config(self) -> None:
+        """Validate logging-related configuration values."""
+        general_config = self.config.get("general")
+        if not isinstance(general_config, dict):
+            return
+
+        logging_config = general_config.get("logging")
+        if logging_config is None:
+            return
+
+        if not isinstance(logging_config, dict):
+            raise ValueError("Configuration key general.logging must be a dictionary")
+
+        level = logging_config.get("level")
+        if level is None:
+            return
+
+        if not isinstance(level, str):
+            raise ValueError("Configuration key general.logging.level must be a string")
+
+        normalized_level = level.strip().upper()
+        if normalized_level not in VALID_LOG_LEVELS:
+            valid_levels = ", ".join(sorted(VALID_LOG_LEVELS))
+            raise ValueError(
+                f"Configuration key general.logging.level must be one of: {valid_levels}"
+            )
+
+        logging_config["level"] = normalized_level
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get configuration value by key.

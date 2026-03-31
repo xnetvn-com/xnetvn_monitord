@@ -282,6 +282,23 @@ class TestConfigLoaderValidation:
         for section in missing_sections:
             assert any(section in msg for msg in warning_messages)
 
+    def test_should_raise_error_when_logging_level_invalid(self, config_file):
+        """Test that invalid logging levels are rejected during config validation."""
+        with open(config_file, "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+
+        config["general"]["logging"]["level"] = "verbose"
+
+        with open(config_file, "w", encoding="utf-8") as f:
+            yaml.dump(config, f)
+
+        loader = ConfigLoader(str(config_file))
+
+        with pytest.raises(ValueError) as exc_info:
+            loader.load()
+
+        assert "logging.level" in str(exc_info.value)
+
 
 class TestConfigLoaderGet:
     """Tests for configuration value retrieval."""

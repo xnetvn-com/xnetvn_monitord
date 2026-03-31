@@ -38,6 +38,31 @@ Các khối chính:
 - logging: level, file, rotation.
 - pid_file, work_dir: PID và thư mục runtime.
 
+
+### general.logging.level
+
+`general.logging.level` điều khiển mức severity tối thiểu được phát ra bởi
+root logger của daemon, rotating file handler, và stdout console handler. Trên
+thực tế, thiết lập này chi phối gần như toàn bộ log của các module đang dùng
+hệ phân cấp logging chuẩn của Python.
+
+- Giá trị mặc định: `INFO`.
+- Giá trị hỗ trợ: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`.
+- Không phân biệt hoa thường: `info` và `INFO` được xử lý như nhau.
+- Giá trị không hợp lệ sẽ bị từ chối ngay khi nạp cấu hình bằng `ValueError`
+  có nhắc trực tiếp tới `general.logging.level`.
+
+Khuyến nghị sử dụng:
+
+| Mức | Dùng khi | Đánh đổi vận hành |
+|-----|----------|-------------------|
+| `DEBUG` | Điều tra bug, lỗi khởi động, hoặc hành vi monitor bất thường | Lượng log lớn nhất; chỉ nên bật tạm thời |
+| `INFO` | Vận hành production hằng ngày | Cân bằng tốt nhất giữa khả năng quan sát và độ ồn |
+| `WARNING` | Chỉ muốn thấy các tình huống bất thường nhưng còn phục hồi được | Che bớt log thành công và log vòng đời thường lệ |
+| `ERROR` | Muốn tập trung vào check thất bại hoặc recovery thất bại | Có thể bỏ lỡ tín hiệu cảnh báo sớm trước khi sự cố nặng hơn |
+| `CRITICAL` | Chỉ muốn log mức khẩn cấp trong lúc xử lý sự cố nghiêm trọng | Quá hẹp cho vận hành bình thường |
+
+- Cùng một mức được áp dụng cho cả `/var/log/xnetvn_monitord/monitor.log` và stdout.
 ## network
 
 - only_ipv4: khi bật, tất cả kết nối outbound chỉ dùng IPv4.

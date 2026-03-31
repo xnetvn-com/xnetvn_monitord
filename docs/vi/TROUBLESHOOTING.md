@@ -65,6 +65,8 @@ post_date: "2026-02-03"
 ### Kiểm tra
 
 - general.logging.enabled.
+- `general.logging.level` phải là một trong `DEBUG`, `INFO`, `WARNING`, `ERROR`,
+  `CRITICAL`.
 - Quyền ghi vào `/var/log/xnetvn_monitord/`.
 
 ## 5. Cảnh báo gửi quá nhiều

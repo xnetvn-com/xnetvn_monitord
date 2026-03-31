@@ -36,7 +36,15 @@ general:
     # Enable or disable logging entirely
     enabled: true
 
-    # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+    # Log verbosity for both the rotating log file and stdout handler.
+    # Supported values (case-insensitive): DEBUG, INFO, WARNING, ERROR, CRITICAL
+    # DEBUG: verbose diagnostic output for troubleshooting and test runs.
+    # INFO: default operational events such as startup, checks, and actions.
+    # WARNING: unexpected but recoverable conditions that need review.
+    # ERROR: failed operations, recovery attempts, or check execution errors.
+    # CRITICAL: severe failures that can prevent normal monitoring operation.
+    # Invalid values are rejected during configuration loading to avoid unclear
+    # startup failures later in the daemon lifecycle.
     level: "INFO"
 
     # Log file path (ensure directory is writable)

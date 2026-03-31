@@ -19,7 +19,21 @@ post_date: "2026-02-03"
 
 - Logs must include enough context to debug.
 - Never log sensitive data (passwords, tokens).
-- Separate log levels: DEBUG, INFO, WARNING, ERROR.
+- Separate log levels: DEBUG, INFO, WARNING, ERROR, CRITICAL.
+
+## 1.1 Log level policy
+
+`general.logging.level` is the runtime gate for daemon log verbosity.
+
+| Level | Meaning | Recommended use |
+|------|---------|-----------------|
+| `DEBUG` | Detailed execution flow and diagnostics | Temporary investigation, development, or targeted incident analysis |
+| `INFO` | Normal lifecycle and operational events | Default production setting |
+| `WARNING` | Unexpected but recoverable conditions | Low-noise environments with separate health dashboards |
+| `ERROR` | Failed checks, failed actions, or operational errors | Short-term focus on active failures |
+| `CRITICAL` | Severe failures threatening service continuity | Emergency triage only |
+
+Allowed values are validated during config loading and normalized to uppercase internally.
 
 ## 2. Storage
 

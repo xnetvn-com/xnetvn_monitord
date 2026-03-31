@@ -65,6 +65,8 @@ post_date: "2026-02-03"
 ### Checks
 
 - general.logging.enabled.
+- `general.logging.level` must be one of `DEBUG`, `INFO`, `WARNING`, `ERROR`,
+  `CRITICAL`.
 - Write permissions for `/var/log/xnetvn_monitord/`.
 
 ## 5. Too many alerts
