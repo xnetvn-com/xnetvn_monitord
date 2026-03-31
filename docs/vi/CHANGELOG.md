@@ -21,6 +21,12 @@ Tất cả các thay đổi quan trọng của dự án sẽ được ghi ở đ
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-03-31
+
+### Changed
+
+- Phát hành: nâng gói lên v1.6.0 và làm mới metadata phát hành cho quy trình tag-driven publication.
+
 ## [1.5.0] - 2026-03-26
 
 ### Changed
