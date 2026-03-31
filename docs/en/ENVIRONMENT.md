@@ -21,6 +21,11 @@ post_date: "2026-02-03"
 The daemon uses config/main.yaml and supports environment variables as $VAR or
 ${VAR}. If a variable is missing, the value becomes null.
 
+`XNETVN_MONITORD_DEEP_DEBUG` is a runtime override for
+`general.logging.deep_debug`. Accepted true values are `1`, `true`, `yes`, and
+`on`. Accepted false values are `0`, `false`, `no`, and `off`. This override
+only has an effect when `general.logging.level=DEBUG`.
+
 The template /opt/xnetvn_monitord/config/.env.example is refreshed on each
 install or upgrade to reflect the latest variables.
 
@@ -39,6 +44,7 @@ the example file if it does not exist and sets permissions to 0600.
 | GITHUB_TOKEN | GitHub API token | Optional | Used by update_checker |
 | PROXY_URI | Outbound proxy URI | Optional | Used by per-service proxy blocks |
 | XNETVN_SERVICE_MANAGER | Service manager override | No | systemd, openrc, sysv |
+| XNETVN_MONITORD_DEEP_DEBUG | Deep debug override | Optional | Overrides `general.logging.deep_debug`; only active with `general.logging.level=DEBUG` |
 
 ## 3. How to Set Environment Variables
 

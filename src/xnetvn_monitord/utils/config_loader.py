@@ -28,7 +28,6 @@ logger = logging.getLogger(__name__)
 VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
 
 
-
 class ConfigLoader:
     """Load and manage application configuration."""
 
@@ -139,9 +138,15 @@ class ConfigLoader:
         normalized_level = level.strip().upper()
         if normalized_level not in VALID_LOG_LEVELS:
             valid_levels = ", ".join(sorted(VALID_LOG_LEVELS))
-            raise ValueError(
-                f"Configuration key general.logging.level must be one of: {valid_levels}"
-            )
+            raise ValueError(f"Configuration key general.logging.level must be one of: {valid_levels}")
+
+        deep_debug = logging_config.get("deep_debug")
+        if deep_debug is not None and not isinstance(deep_debug, bool):
+            raise ValueError("Configuration key general.logging.deep_debug must be a boolean")
+
+        deep_debug_file = logging_config.get("deep_debug_file")
+        if deep_debug_file is not None and not isinstance(deep_debug_file, str):
+            raise ValueError("Configuration key general.logging.deep_debug_file must be a string")
 
         logging_config["level"] = normalized_level
 

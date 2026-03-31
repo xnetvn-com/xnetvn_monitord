@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from urllib import error, request
 
+from .debug_observability import get_debug_observability
 from .network import (
     ProxyConfigurationError,
     download_url_to_file,
@@ -248,9 +249,21 @@ class UpdateChecker:
 
         req = request.Request(url, headers=headers)
         proxy_uri = resolve_proxy_uri(self.proxy_config)
+        observability = get_debug_observability()
+        started_at = time.monotonic()
         try:
             with open_url(req, 15, None, self.proxy_config, self.only_ipv4) as response:  # nosec B310
-                data = json.loads(response.read().decode("utf-8"))
+                raw_payload = response.read().decode("utf-8")
+                observability.emit_http_exchange(
+                    source="update_checker.fetch_latest_release",
+                    method="GET",
+                    target=url,
+                    request_headers=headers,
+                    response_preview=raw_payload,
+                    duration_ms=(time.monotonic() - started_at) * 1000,
+                    outcome="success",
+                )
+                data = json.loads(raw_payload)
         except error.HTTPError as exc:
             logger.error("GitHub release check failed: %s", exc)
             return None
@@ -278,6 +291,11 @@ class UpdateChecker:
     def check_for_updates(self) -> UpdateCheckResult:
         """Check for available updates from GitHub Releases."""
         if not self.should_check():
+            get_debug_observability().emit_decision(
+                source="update_checker.check_for_updates",
+                decision="skip",
+                reason="interval_not_elapsed",
+            )
             return UpdateCheckResult(
                 checked=False,
                 update_available=False,

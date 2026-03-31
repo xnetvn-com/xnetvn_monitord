@@ -63,6 +63,47 @@ Khuyến nghị sử dụng:
 | `CRITICAL` | Chỉ muốn log mức khẩn cấp trong lúc xử lý sự cố nghiêm trọng | Quá hẹp cho vận hành bình thường |
 
 - Cùng một mức được áp dụng cho cả `/var/log/xnetvn_monitord/monitor.log` và stdout.
+
+### general.logging.deep_debug và các khóa liên quan
+
+`general.logging.deep_debug` chỉ có hiệu lực khi đồng thời thỏa hai điều kiện:
+
+- `general.logging.enabled: true`
+- `general.logging.level: DEBUG`
+
+Hành vi theo từng chế độ:
+
+- `DEBUG` với `deep_debug: false`: daemon phát thêm các sự kiện observability nội bộ vào các log handler thông thường. Nhóm sự kiện này bao gồm decision path, thời gian retry, preview stdout/stderr của lệnh, preview request/response HTTP đã redacted, và các resource snapshot do chính `xnetvn_monitord` trực tiếp thu thập.
+- `DEBUG` với `deep_debug: true`: vẫn giữ lớp observability nội bộ ở trên và bổ sung một startup host sweep theo kiểu best-effort, ghi vào file deep debug riêng.
+
+Các khóa hỗ trợ:
+
+- `general.logging.deep_debug`: bật lớp startup host sweep.
+- `general.logging.deep_debug_file`: file riêng cho deep debug. Nếu bỏ trống, daemon sẽ suy ra đường dẫn `deep-debug.log` cùng thư mục với `general.logging.file`.
+- `general.logging.deep_debug_max_size_mb`: kích thước rotate cho file deep debug.
+- `general.logging.deep_debug_backup_count`: số file deep debug đã rotate được giữ lại.
+- `general.logging.preview_chars`: giới hạn cắt ngắn cho preview command và HTTP.
+
+Biến môi trường override:
+
+- `XNETVN_MONITORD_DEEP_DEBUG=1`, `true`, `yes`, hoặc `on` sẽ ép bật deep debug.
+- `XNETVN_MONITORD_DEEP_DEBUG=0`, `false`, `no`, hoặc `off` sẽ ép tắt deep debug.
+- Biến môi trường này ưu tiên hơn YAML, nhưng deep debug vẫn bị tắt nếu mức log chính không phải `DEBUG`.
+
+Các nguồn dữ liệu hiện được quét ở startup khi deep debug bật:
+
+- snapshot telemetry đọc được trong `/proc` như load, memory, PSI, disk và network counters
+- các file đọc được dưới `/var/log`, nhưng chỉ lấy preview theo dòng cho các file mang tính log
+- metadata snapshot cho `general.work_dir`
+- output theo kiểu best-effort từ `journalctl`, `ps aux`, `df -h`, `ss -tunap`, `ip -brief addr`, `ip route`, và `systemctl list-units`
+
+Giới hạn an toàn:
+
+- Giá trị nhạy cảm sẽ được redacted trước khi ghi log.
+- Nội dung HTTP và command sẽ bị cắt theo `general.logging.preview_chars`.
+- File không mang tính log chỉ được ghi metadata snapshot, không sao chép nội dung vào deep debug log.
+- Observability tái sử dụng `notifications.content_filter.redact_patterns` và `redact_replacement` để redaction.
+
 ## network
 
 - only_ipv4: khi bật, tất cả kết nối outbound chỉ dùng IPv4.

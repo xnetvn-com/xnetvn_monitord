@@ -31,7 +31,14 @@ from typing import Any, Dict, Optional
 from . import __version__ as package_version
 from .monitors import ResourceMonitor, ServiceMonitor
 from .notifiers import NotificationManager
-from .utils import ConfigLoader, UpdateChecker, load_env_file
+from .utils import (
+    ConfigLoader,
+    UpdateChecker,
+    configure_debug_observability,
+    get_debug_observability,
+    load_env_file,
+)
+from .utils.debug_observability import resolve_observability_settings
 from .utils.systemd_notify import SystemdNotifier
 
 logger = logging.getLogger(__name__)
@@ -57,6 +64,7 @@ class MonitorDaemon:
         self.resource_monitor: Optional[ResourceMonitor] = None
         self.notification_manager: Optional[NotificationManager] = None
         self.systemd_notifier = SystemdNotifier()
+        self.debug_observability = get_debug_observability()
 
         # Setup signal handlers
         signal.signal(signal.SIGTERM, self._signal_handler)
@@ -101,6 +109,22 @@ class MonitorDaemon:
 
         if self.service_monitor:
             self.service_monitor.notification_manager = self.notification_manager
+
+        observability_settings = resolve_observability_settings(
+            self.config.get("general", {}).get("logging", {}),
+            self.config.get("notifications", {}),
+        )
+        self.debug_observability.emit_event(
+            "daemon_initialize",
+            config_path=self.config_path,
+            hostname=self.hostname,
+            version=runtime_version,
+        )
+        if observability_settings.deep_debug:
+            self.debug_observability.capture_startup_host_state(
+                work_dir=self.config.get("general", {}).get("work_dir"),
+                resource_monitor=self.resource_monitor,
+            )
 
         # Test notification channels
         if enabled_channels:
@@ -195,6 +219,10 @@ class MonitorDaemon:
         root_logger.setLevel(log_level)
         root_logger.addHandler(file_handler)
         root_logger.addHandler(console_handler)
+        self.debug_observability = configure_debug_observability(
+            log_config,
+            self.config.get("notifications", {}),
+        )
 
     def _create_pid_file(self, pid_file: str) -> None:
         """Create PID file.
@@ -234,6 +262,7 @@ class MonitorDaemon:
         try:
             while self.running:
                 cycle_start = time.time()
+                self.debug_observability.emit_event("monitor_cycle_started", check_interval=check_interval)
 
                 # Check services
                 if self.service_monitor and self.service_monitor.enabled:
@@ -257,6 +286,11 @@ class MonitorDaemon:
                 sleep_time = max(0, check_interval - cycle_duration)
 
                 if sleep_time > 0:
+                    self.debug_observability.emit_event(
+                        "monitor_cycle_completed",
+                        cycle_duration=cycle_duration,
+                        sleep_time=sleep_time,
+                    )
                     logger.debug(f"Monitoring cycle completed in {cycle_duration:.2f}s, sleeping for {sleep_time:.2f}s")
                     time.sleep(sleep_time)
                 else:
@@ -506,6 +540,7 @@ class MonitorDaemon:
         self.systemd_notifier.send_stopping(self._build_runtime_status("stopping"))
         self.running = False
         self._remove_pid_file()
+        self.debug_observability.shutdown()
         logger.info("Daemon shutdown completed")
 
 
