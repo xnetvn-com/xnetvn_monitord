@@ -63,6 +63,48 @@ Recommended usage:
 | `CRITICAL` | Emergency-only logging during severe incident triage | Too narrow for normal operation |
 
 - The same level is applied to both `/var/log/xnetvn_monitord/monitor.log` and stdout.
+
+### general.logging.deep_debug and related keys
+
+`general.logging.deep_debug` is only effective when both of these conditions are true:
+
+- `general.logging.enabled: true`
+- `general.logging.level: DEBUG`
+
+Behavior by mode:
+
+- `DEBUG` with `deep_debug: false`: the daemon emits expanded internal observability events into the normal log handlers. These events cover daemon decision paths, retry timing, command stdout/stderr previews, redacted HTTP request/response previews, and resource snapshots gathered directly by `xnetvn_monitord`.
+- `DEBUG` with `deep_debug: true`: observability traffic moves into the dedicated deep debug log instead of the normal handlers and adds a curated startup host sweep written to that same file.
+
+Supported keys:
+
+- `general.logging.deep_debug`: enables the startup host sweep layer.
+- `general.logging.deep_debug_file`: optional dedicated file for deep debug output. If omitted, the daemon derives a sibling `deep-debug.log` path from `general.logging.file`.
+- `general.logging.deep_debug_max_size_mb`: rotation size for the deep debug file.
+- `general.logging.deep_debug_backup_count`: number of rotated deep debug files to retain.
+- `general.logging.preview_chars`: truncation limit for command and HTTP previews.
+
+Environment override:
+
+- `XNETVN_MONITORD_DEEP_DEBUG=1`, `true`, `yes`, or `on` forces deep debug on.
+- `XNETVN_MONITORD_DEEP_DEBUG=0`, `false`, `no`, or `off` forces deep debug off.
+- The environment variable takes precedence over YAML, but deep debug is still disabled unless the main logging level is `DEBUG`.
+
+Current deep debug startup sweep sources:
+
+- readable `/proc` telemetry snapshots such as load, memory, PSI, disk, and network counters
+- selected core text logs under `/var/log`, currently limited to `syslog`, `messages`, `auth.log`, `kern.log`, `cloud-init.log`, `cloud-init-output.log`, `alternatives.log`, and `audit/audit.log`
+- metadata snapshot for `general.work_dir`
+- best-effort command output from `journalctl`, `ps aux`, `df -h`, `ss -tunap`, `ip -brief addr`, `ip route`, and `systemctl list-units`
+
+Safety boundaries:
+
+- Sensitive values are redacted before logging.
+- HTTP bodies, command previews, and host-log line previews are truncated to `general.logging.preview_chars`.
+- Binary files, `/var/log/journal/*`, and noisy app or web logs outside the curated list are skipped from content capture.
+- Non-log-like files are recorded as metadata snapshots only; their content is not copied into the deep debug log.
+- The same `notifications.content_filter.redact_patterns` and `redact_replacement` settings are reused for observability redaction.
+
 ## network
 
 - only_ipv4: when true, outbound DNS resolution and HTTP calls use IPv4 only.

@@ -21,6 +21,11 @@ post_date: "2026-02-03"
 Daemon sử dụng config/main.yaml và hỗ trợ biến môi trường theo dạng $VAR hoặc
 ${VAR}. Khi biến môi trường không tồn tại, giá trị sẽ được thay bằng null.
 
+`XNETVN_MONITORD_DEEP_DEBUG` là biến override lúc chạy cho
+`general.logging.deep_debug`. Các giá trị bật hợp lệ là `1`, `true`, `yes`, và
+`on`. Các giá trị tắt hợp lệ là `0`, `false`, `no`, và `off`. Override này chỉ
+có tác dụng khi `general.logging.level=DEBUG`.
+
 Tệp mẫu /opt/xnetvn_monitord/config/.env.example được làm mới mỗi lần cài đặt
 hoặc nâng cấp để tham khảo các biến môi trường mới nhất.
 
@@ -39,6 +44,7 @@ file mẫu nếu chưa tồn tại và đặt quyền 0600.
 | GITHUB_TOKEN | GitHub API token | Tùy cấu hình | Dùng cho update_checker |
 | PROXY_URI | Proxy outbound | Tùy cấu hình | Dùng cho proxy theo từng dịch vụ |
 | XNETVN_SERVICE_MANAGER | Override service manager | Không | systemd, openrc, sysv |
+| XNETVN_MONITORD_DEEP_DEBUG | Override deep debug | Tùy cấu hình | Override `general.logging.deep_debug`; chỉ hoạt động khi `general.logging.level=DEBUG` |
 
 ## 3. Cách thiết lập biến môi trường
 

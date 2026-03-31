@@ -15,9 +15,18 @@
 """Utilities package initialization."""
 
 from .config_loader import ConfigLoader
+from .debug_observability import configure_debug_observability, get_debug_observability
 from .env_loader import load_env_file
 from .network import force_ipv4
 from .service_manager import ServiceManager
 from .update_checker import UpdateChecker
 
-__all__ = ["ConfigLoader", "ServiceManager", "UpdateChecker", "force_ipv4", "load_env_file"]
+__all__ = [
+    "ConfigLoader",
+    "ServiceManager",
+    "UpdateChecker",
+    "configure_debug_observability",
+    "force_ipv4",
+    "get_debug_observability",
+    "load_env_file",
+]

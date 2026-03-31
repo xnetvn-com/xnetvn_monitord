@@ -33,6 +33,7 @@ from xnetvn_monitord.monitors.disk_cleanup import (
     quarantine_cleanup_candidates,
     scan_cleanup_candidates,
 )
+from xnetvn_monitord.utils.debug_observability import get_debug_observability
 from xnetvn_monitord.utils.service_manager import ServiceManager
 
 logger = logging.getLogger(__name__)
@@ -111,6 +112,10 @@ class ResourceMonitor:
             logger.error(f"Error checking resources: {str(e)}", exc_info=True)
             results["error"] = str(e)
 
+        get_debug_observability().emit_snapshot(
+            source="resource_monitor.check_resources",
+            snapshot=results,
+        )
         return results
 
     def _check_cpu_load(self, config: Dict) -> Dict:
@@ -548,6 +553,14 @@ class ResourceMonitor:
                     "stdout": action_result.get("stdout", ""),
                     "stderr": action_result.get("stderr", ""),
                 }
+                get_debug_observability().emit_command_result(
+                    source="resource_monitor.restart_services",
+                    service=service_name,
+                    command=action_result.get("command"),
+                    returncode=action_result.get("returncode"),
+                    stdout=action_result.get("stdout", ""),
+                    stderr=action_result.get("stderr", ""),
+                )
                 results.append(service_result)
 
                 if action_result.get("success"):

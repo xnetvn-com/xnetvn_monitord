@@ -29,6 +29,7 @@ import urllib.error
 import urllib.request
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
+from xnetvn_monitord.utils.debug_observability import get_debug_observability
 from xnetvn_monitord.utils.network import (
     ProxyConfigurationError,
     is_http_url,
@@ -555,12 +556,23 @@ class ServiceMonitor:
             return False
 
         try:
+            observability = get_debug_observability()
             for command in commands:
+                started_at = time.monotonic()
                 result = subprocess.run(
                     command,
                     capture_output=True,
                     text=True,
                     timeout=timeout_seconds,
+                )
+                observability.emit_command_result(
+                    source="service_monitor.custom_command",
+                    service=service_config.get("name"),
+                    command=command,
+                    returncode=result.returncode,
+                    stdout=result.stdout,
+                    stderr=result.stderr,
+                    duration_ms=(time.monotonic() - started_at) * 1000,
                 )
                 if result.returncode != 0:
                     return False
@@ -631,6 +643,16 @@ class ServiceMonitor:
             context.verify_mode = ssl.CERT_NONE
 
         start_time = time.monotonic()
+        observability = get_debug_observability()
+        observability.emit_http_exchange(
+            source="service_monitor.http_check",
+            service=service_config.get("name", "unknown"),
+            method=http_method,
+            target=target_label,
+            request_headers=headers,
+            timeout_seconds=timeout_seconds,
+            verify_tls=verify_tls,
+        )
         try:
             proxy_config = service_config.get("proxy", self.proxy_config)
             with open_url(
@@ -686,6 +708,16 @@ class ServiceMonitor:
                         "target": target_label,
                     }
 
+                observability.emit_http_exchange(
+                    source="service_monitor.http_check",
+                    service=service_config.get("name", "unknown"),
+                    method=http_method,
+                    target=target_label,
+                    status_code=status_code,
+                    response_preview="<empty>",
+                    duration_ms=elapsed_ms,
+                    outcome="success",
+                )
                 return {
                     "running": True,
                     "message": f"HTTP {status_code} ({elapsed_ms:.0f}ms)",
@@ -695,6 +727,17 @@ class ServiceMonitor:
                 }
         except urllib.error.HTTPError as e:
             elapsed_ms = (time.monotonic() - start_time) * 1000
+            response_preview = read_response_preview(e) or str(e)
+            observability.emit_http_exchange(
+                source="service_monitor.http_check",
+                service=service_config.get("name", "unknown"),
+                method=http_method,
+                target=target_label,
+                status_code=e.code,
+                response_preview=response_preview,
+                duration_ms=elapsed_ms,
+                outcome="http_error",
+            )
             logger.error(
                 (
                     "HTTP check failed service=%s method=%s target=%s "
@@ -705,7 +748,7 @@ class ServiceMonitor:
                 target_label,
                 e.code,
                 elapsed_ms,
-                read_response_preview(e) or str(e),
+                response_preview,
             )
             return {
                 "running": False,
@@ -812,6 +855,12 @@ class ServiceMonitor:
             return None
 
         if not self._check_action_cooldown(service_key, service_config):
+            get_debug_observability().emit_decision(
+                source="service_monitor.handle_service_failure",
+                service=service_name,
+                decision="skip_recovery",
+                reason="action_cooldown",
+            )
             logger.info(f"Service {service_name} is in action cooldown period, skipping recovery")
             return {
                 "action": "recovery_skipped",
@@ -1140,6 +1189,7 @@ class ServiceMonitor:
                 logger.error(f"No restart command defined for service: {service_name}")
                 return False
 
+            observability = get_debug_observability()
             for command in commands:
                 command_label = " ".join(command)
                 logger.info(
@@ -1147,11 +1197,21 @@ class ServiceMonitor:
                     service_name,
                     command_label,
                 )
+                started_at = time.monotonic()
                 result = subprocess.run(
                     command,
                     capture_output=True,
                     text=True,
                     timeout=60,
+                )
+                observability.emit_command_result(
+                    source="service_monitor.restart_service",
+                    service=service_name,
+                    command=command,
+                    returncode=result.returncode,
+                    stdout=result.stdout,
+                    stderr=result.stderr,
+                    duration_ms=(time.monotonic() - started_at) * 1000,
                 )
                 if result.returncode != 0:
                     logger.warning(

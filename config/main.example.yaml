@@ -47,6 +47,36 @@ general:
     # startup failures later in the daemon lifecycle.
     level: "INFO"
 
+    # Enable expanded host-level diagnostics when level=DEBUG.
+    # false: DEBUG emits internal observability through the normal handlers,
+    #        including decision paths, retry timing, command previews, HTTP
+    #        previews, and resource snapshots gathered directly by the daemon.
+    # true:  Writes observability traffic into a dedicated deep debug log file
+    #        and adds a curated startup host sweep with /proc telemetry,
+    #        selected core system logs, work_dir metadata, and host command
+    #        previews. Binary files and noisy app/web logs are skipped.
+    # Runtime override:
+    #   XNETVN_MONITORD_DEEP_DEBUG=1 enables deep debug when level=DEBUG.
+    #   XNETVN_MONITORD_DEEP_DEBUG=0 forces deep debug off.
+    deep_debug: false
+
+    # Optional dedicated log file for deep debug output.
+    # When deep_debug=true, observability events stay in this file instead of
+    # being duplicated into the normal rotating monitor log.
+    # Default behavior derives this from the main log file and uses a sibling
+    # file named deep-debug.log.
+    deep_debug_file: "/var/log/xnetvn_monitord/deep-debug.log"
+
+    # Maximum deep debug log file size (MB) before rotation.
+    deep_debug_max_size_mb: 100
+
+    # Number of rotated deep debug log files to keep.
+    deep_debug_backup_count: 10
+
+    # Maximum number of characters stored for stdout/stderr, HTTP,
+    # and selected host-log line previews.
+    preview_chars: 256
+
     # Log file path (ensure directory is writable)
     file: "/var/log/xnetvn_monitord/monitor.log"
 

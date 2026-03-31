@@ -965,7 +965,7 @@ class NotificationManager:
 
         return filtered_content
 
-    def _filter_dict_content(self, data: Dict[str, Any]) -> Any:
+    def _filter_dict_content(self, data: Dict[str, Any] | List[Any] | Any) -> Any:
         """Recursively filter sensitive information from dictionaries and lists."""
         if isinstance(data, list):
             filtered_items = []
