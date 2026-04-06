@@ -6,6 +6,13 @@ This format follows Keep a Changelog and uses Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-04-06
+
+### Changed
+
+- Systemd integration: add watchdog support, runtime resource prioritization, and updated service unit handling for the release.
+- Release: bump package to v1.7.0 and refresh release metadata for tag-driven publication.
+
 ## [1.6.0] - 2026-03-31
 
 ### Changed

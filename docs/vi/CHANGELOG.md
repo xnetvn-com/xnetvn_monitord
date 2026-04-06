@@ -21,6 +21,13 @@ Tất cả các thay đổi quan trọng của dự án sẽ được ghi ở đ
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-04-06
+
+### Changed
+
+- Tích hợp systemd: bổ sung watchdog, ưu tiên tài nguyên runtime, và cập nhật unit service cho bản phát hành.
+- Phát hành: nâng gói lên v1.7.0 và làm mới metadata phát hành cho quy trình tag-driven publication.
+
 ## [1.6.0] - 2026-03-31
 
 ### Changed
