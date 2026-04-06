@@ -24,6 +24,14 @@ NoNewPrivileges=false
 ProtectSystem=full
 ProtectHome=false
 
+# Scheduling priority so monitoring and recovery stay responsive under load.
+Nice=-10
+OOMScoreAdjust=-900
+IOSchedulingClass=best-effort
+IOSchedulingPriority=0
+CPUWeight=10000
+IOWeight=10000
+
 # Resource limits
 LimitNOFILE=65536
 LimitNPROC=4096

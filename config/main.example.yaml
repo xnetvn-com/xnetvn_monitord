@@ -642,6 +642,10 @@ resource_monitor:
   # Action when thresholds exceeded: restart_services, notify, both
   action_on_threshold: "both"
 
+  # Number of processes shown in each diagnostic ranking section.
+  # Applies to CPU %, CPU core load, RAM, disk I/O, and network reports.
+  top_process_limit: 10
+
   # CPU load monitoring
   cpu_load:
     enabled: true
@@ -780,9 +784,10 @@ notifications:
   # Enable or disable notifications globally
   enabled: true
 
-  # When a channel enables include_system_stats, alerts include safe top-5
-  # process diagnostics for CPU %, CPU core load, RAM, disk I/O, and
-  # best-effort network throughput. Full command lines are never sent.
+  # When a channel enables include_system_stats, alerts include safe
+  # top-process diagnostics for CPU %, CPU core load, RAM, disk I/O, and
+  # best-effort network throughput. The number of entries per section comes
+  # from resource_monitor.top_process_limit (default: 10).
   # Process-level network Mbps requires an optional collector such as nethogs
   # and enough privileges; otherwise the notification marks that metric as
   # unavailable instead of guessing.

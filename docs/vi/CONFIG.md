@@ -284,8 +284,10 @@ Mỗi kênh (email/telegram/slack/discord/webhook) có:
 - Telegram chat ID hỗ trợ gửi vào topic theo định dạng -100XXXX_YYY,
   trong đó YYY là topic (message_thread_id).
 - Khi bật `include_system_stats` cho một kênh, thông báo sự kiện sẽ kèm thêm
-  chẩn đoán top 5 tiến trình theo CPU %, CPU core load, RAM MB/RAM %, disk I/O,
+  chẩn đoán tiến trình theo CPU %, CPU core load, RAM MB/RAM %, disk I/O,
   và network Mbps theo kiểu best-effort.
+- Số lượng dòng trong mỗi mục chẩn đoán lấy từ `resource_monitor.top_process_limit`
+  và mặc định là 10.
 - Phần chẩn đoán chỉ gửi tên executable, user, PID và các chỉ số tài nguyên;
   tuyệt đối không gửi full command line ra ngoài.
 - Thống kê network theo tiến trình cần collector tùy chọn như `nethogs` và đủ
