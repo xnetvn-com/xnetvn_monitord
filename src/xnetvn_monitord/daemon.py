@@ -28,6 +28,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+import psutil
+
 from . import __version__ as package_version
 from .monitors import ResourceMonitor, ServiceMonitor
 from .notifiers import NotificationManager
@@ -44,6 +46,10 @@ from .utils.systemd_notify import SystemdNotifier
 logger = logging.getLogger(__name__)
 
 UPDATE_CONFIG_DOC_URL = "https://github.com/xnetvn-com/xnetvn_monitord/blob/main/docs/vi/ENVIRONMENT.md"
+
+DEFAULT_RUNTIME_NICE = -10
+DEFAULT_RUNTIME_IO_PRIORITY = 0
+DEFAULT_RUNTIME_OOM_SCORE_ADJUST = -900
 
 
 class MonitorDaemon:
@@ -79,6 +85,7 @@ class MonitorDaemon:
 
         # Setup logging
         self._setup_logging()
+        self._apply_runtime_priority()
 
         logger.info("=" * 80)
         logger.info("xNetVN Monitor Daemon starting...")
@@ -222,6 +229,35 @@ class MonitorDaemon:
         self.debug_observability = configure_debug_observability(
             log_config,
             self.config.get("notifications", {}),
+        )
+
+    def _apply_runtime_priority(self) -> None:
+        """Best-effort priority boost so service checks remain schedulable under heavy load."""
+        process = psutil.Process()
+
+        try:
+            process.nice(DEFAULT_RUNTIME_NICE)
+        except (psutil.Error, OSError, PermissionError, ValueError) as exc:
+            logger.warning("Failed to raise process nice priority: %s", str(exc))
+
+        ionice = getattr(process, "ionice", None)
+        if callable(ionice):
+            try:
+                ionice(psutil.IOPRIO_CLASS_BE, DEFAULT_RUNTIME_IO_PRIORITY)
+            except (psutil.Error, OSError, PermissionError, ValueError, AttributeError) as exc:
+                logger.warning("Failed to raise process I/O priority: %s", str(exc))
+
+        try:
+            with open("/proc/self/oom_score_adj", "w", encoding="utf-8") as handle:
+                handle.write(str(DEFAULT_RUNTIME_OOM_SCORE_ADJUST))
+        except OSError as exc:
+            logger.warning("Failed to adjust OOM score for daemon priority: %s", str(exc))
+
+        logger.info(
+            "Applied runtime priority controls: nice=%s, ionice=best-effort/%s, oom_score_adj=%s",
+            DEFAULT_RUNTIME_NICE,
+            DEFAULT_RUNTIME_IO_PRIORITY,
+            DEFAULT_RUNTIME_OOM_SCORE_ADJUST,
         )
 
     def _create_pid_file(self, pid_file: str) -> None:
@@ -461,6 +497,7 @@ class MonitorDaemon:
         logger.info("Received SIGHUP, reloading configuration...")
         try:
             self.config = self.config_loader.reload()
+            self._apply_runtime_priority()
             logger.info("Configuration reloaded successfully")
 
             # Reinitialize components

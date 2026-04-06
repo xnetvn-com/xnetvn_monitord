@@ -287,8 +287,10 @@ Each channel (email/telegram/slack/discord/webhook) has:
 - Telegram chat IDs support topic routing with the format -100XXXX_YYY,
   where YYY is the topic (message_thread_id).
 - When `include_system_stats` is enabled for a channel, event reports also
-  include top-5 process diagnostics for CPU %, CPU core load, RAM MB/RAM %,
+  include process diagnostics for CPU %, CPU core load, RAM MB/RAM %,
   disk I/O, and best-effort network Mbps.
+- The number of entries in each diagnostic section comes from
+  `resource_monitor.top_process_limit` and defaults to 10.
 - Process diagnostics only expose the executable name, user, PID, and
   resource counters; full command lines are never included in outbound
   notifications.

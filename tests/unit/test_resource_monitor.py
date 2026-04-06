@@ -157,6 +157,19 @@ class TestResourceMonitorCPUCheck:
 class TestResourceMonitorMemoryCheck:
     """Tests for memory monitoring."""
 
+    def test_should_report_available_memory_percent_instead_of_used_percent(self, mocker):
+        """Test memory.available_percent reports remaining memory, not used memory."""
+        mock_mem = mocker.MagicMock()
+        mock_mem.total = 8 * 1024 * 1024 * 1024
+        mock_mem.available = 2 * 1024 * 1024 * 1024
+        mock_mem.percent = 75.0
+        mocker.patch("psutil.virtual_memory", return_value=mock_mem)
+
+        monitor = ResourceMonitor({"enabled": True})
+        result = monitor._check_memory({"enabled": True})
+
+        assert result["available_percent"] == 25.0
+
     def test_should_detect_low_memory_percentage(self, mocker):
         """Test detection of low memory percentage."""
         mock_mem = mocker.MagicMock()
@@ -811,6 +824,72 @@ class TestResourceMonitorIntegration:
 class TestResourceMonitorAdditionalCoverage:
     """Additional tests to cover missing branches."""
 
+    def test_should_default_top_process_limit_to_ten(self, mocker):
+        """Test process diagnostics keep ten ranked entries by default."""
+        snapshots = [
+            {
+                "user": "root",
+                "pid": index,
+                "command": f"proc-{index}",
+                "cpu_percent": float(index),
+                "cpu_core_load": float(index) / 100.0,
+                "memory_mb": float(index * 10),
+                "memory_percent": float(index),
+                "read_mb_per_sec": float(index),
+                "write_mb_per_sec": float(index) / 2.0,
+                "total_disk_io_mb_per_sec": float(index) * 1.5,
+            }
+            for index in range(1, 13)
+        ]
+
+        monitor = ResourceMonitor({"enabled": True})
+        mocker.patch.object(monitor, "_collect_process_snapshots", return_value=snapshots)
+        mocker.patch.object(
+            monitor,
+            "_collect_top_network_processes",
+            return_value={"available": False, "reason": "", "top": []},
+        )
+
+        result = monitor._collect_top_process_stats()
+
+        assert len(result["cpu_percent"]) == 10
+        assert len(result["cpu_load"]) == 10
+        assert len(result["memory"]) == 10
+        assert len(result["disk_io"]) == 10
+
+    def test_should_apply_configured_top_process_limit(self, mocker):
+        """Test process diagnostics honor the configured ranking limit."""
+        snapshots = [
+            {
+                "user": "root",
+                "pid": index,
+                "command": f"proc-{index}",
+                "cpu_percent": float(index),
+                "cpu_core_load": float(index) / 100.0,
+                "memory_mb": float(index * 10),
+                "memory_percent": float(index),
+                "read_mb_per_sec": float(index),
+                "write_mb_per_sec": float(index) / 2.0,
+                "total_disk_io_mb_per_sec": float(index) * 1.5,
+            }
+            for index in range(1, 7)
+        ]
+
+        monitor = ResourceMonitor({"enabled": True, "top_process_limit": 3})
+        mocker.patch.object(monitor, "_collect_process_snapshots", return_value=snapshots)
+        mocker.patch.object(
+            monitor,
+            "_collect_top_network_processes",
+            return_value={"available": False, "reason": "", "top": []},
+        )
+
+        result = monitor._collect_top_process_stats()
+
+        assert len(result["cpu_percent"]) == 3
+        assert len(result["cpu_load"]) == 3
+        assert len(result["memory"]) == 3
+        assert len(result["disk_io"]) == 3
+
     def test_should_append_action_results_when_present(self, mocker):
         """Test action_results list is populated when recovery returns details."""
         monitor = ResourceMonitor({"enabled": True, "cpu_load": {"enabled": True}})
@@ -1065,6 +1144,30 @@ class TestResourceMonitorAdditionalCoverage:
         assert [entry["command"] for entry in result["top"]] == ["python3", "nginx"]
         assert result["top"][0]["pid"] == 321
         assert abs(result["top"][0]["total_mbps"] - 1.2) < 1e-9
+
+    def test_should_apply_configured_top_process_limit_to_network_rankings(self, mocker):
+        """Test network diagnostics honor the configured ranking limit."""
+        monitor = ResourceMonitor({"enabled": True, "top_process_limit": 3})
+        mocker.patch("shutil.which", return_value="/usr/sbin/nethogs")
+        mocker.patch("os.geteuid", return_value=0)
+        mocker.patch(
+            "subprocess.run",
+            return_value=mocker.MagicMock(
+                stdout="\n".join(
+                    [
+                        "/usr/bin/python3/321/root\t100.0\t50.0",
+                        "/usr/sbin/nginx/123/www-data\t90.0\t40.0",
+                        "/usr/sbin/mysqld/456/mysql\t80.0\t30.0",
+                        "/usr/bin/redis-server/789/redis\t70.0\t20.0",
+                    ]
+                )
+            ),
+        )
+
+        result = monitor._collect_top_network_processes()
+
+        assert result["available"] is True
+        assert len(result["top"]) == 3
 
     def test_should_ignore_malformed_nethogs_lines(self):
         """Test malformed nethogs lines are ignored safely."""

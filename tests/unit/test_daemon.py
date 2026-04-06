@@ -19,6 +19,7 @@ import sys
 
 import pytest
 
+import xnetvn_monitord.daemon as daemon_module
 from xnetvn_monitord import __version__ as package_version
 from xnetvn_monitord.daemon import MonitorDaemon, main
 from xnetvn_monitord.utils.update_checker import UpdateCheckResult
@@ -130,6 +131,40 @@ class TestMonitorDaemonInitialization:
 
         daemon.systemd_notifier.send_ready.assert_called_once()
         assert package_version in daemon.systemd_notifier.send_ready.call_args[0][0]
+
+    def test_should_apply_runtime_priority_during_initialize(self, mocker, tmp_path):
+        """Test daemon applies runtime priority controls during initialization."""
+        config = _build_minimal_config(tmp_path)
+
+        mocker.patch("xnetvn_monitord.daemon.ConfigLoader.load", return_value=config)
+        mocker.patch("xnetvn_monitord.daemon.ServiceMonitor")
+        mocker.patch("xnetvn_monitord.daemon.ResourceMonitor")
+        manager_mock = mocker.patch("xnetvn_monitord.daemon.NotificationManager")
+        manager_mock.return_value.get_enabled_channels.return_value = []
+
+        daemon = MonitorDaemon("/tmp/config.yaml")
+        mocker.patch.object(daemon, "_create_pid_file")
+        priority_mock = mocker.patch.object(daemon, "_apply_runtime_priority")
+
+        daemon.initialize()
+
+        priority_mock.assert_called_once()
+
+    def test_should_raise_runtime_priority_best_effort(self, mocker, tmp_path):
+        """Test daemon raises CPU, I/O, and OOM priority for its own process."""
+        daemon = MonitorDaemon("/tmp/config.yaml")
+        daemon.config = _build_minimal_config(tmp_path)
+
+        process_mock = mocker.Mock()
+        mocker.patch("xnetvn_monitord.daemon.psutil.Process", return_value=process_mock)
+        open_mock = mocker.patch("builtins.open", mocker.mock_open())
+
+        daemon._apply_runtime_priority()
+
+        process_mock.nice.assert_called_once_with(-10)
+        process_mock.ionice.assert_called_once_with(daemon_module.psutil.IOPRIO_CLASS_BE, 0)
+        open_mock.assert_called_once_with("/proc/self/oom_score_adj", "w", encoding="utf-8")
+        open_mock().write.assert_called_once_with("-900")
 
 
 class TestMonitorDaemonLogging:

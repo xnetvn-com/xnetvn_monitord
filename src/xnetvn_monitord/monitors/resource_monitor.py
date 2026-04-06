@@ -38,6 +38,8 @@ from xnetvn_monitord.utils.service_manager import ServiceManager
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_TOP_PROCESS_LIMIT = 10
+
 
 class ResourceMonitor:
     """Monitor system resources and trigger recovery actions."""
@@ -192,12 +194,10 @@ class ResourceMonitor:
         try:
             # Get memory info
             mem = psutil.virtual_memory()
+            free_percent = (mem.available / mem.total) * 100 if mem.total else 0.0
             result["total_mb"] = mem.total / (1024 * 1024)
             result["available_mb"] = mem.available / (1024 * 1024)
-            result["available_percent"] = mem.percent
-
-            # Calculate free percentage
-            free_percent = (mem.available / mem.total) * 100
+            result["available_percent"] = free_percent
 
             # Check thresholds
             free_percent_threshold = config.get("free_percent_threshold", 5.0)
@@ -651,6 +651,7 @@ class ResourceMonitor:
 
     def _collect_top_process_stats(self) -> Dict[str, Any]:
         """Collect ranked process snapshots for diagnostics in notifications."""
+        limit = self._get_top_process_limit()
         snapshots = self._collect_process_snapshots()
 
         return {
@@ -658,16 +659,19 @@ class ResourceMonitor:
                 snapshots,
                 "cpu_percent",
                 ["user", "pid", "command", "cpu_percent", "cpu_core_load"],
+                limit=limit,
             ),
             "cpu_load": self._build_ranked_process_list(
                 snapshots,
                 "cpu_core_load",
                 ["user", "pid", "command", "cpu_core_load", "cpu_percent"],
+                limit=limit,
             ),
             "memory": self._build_ranked_process_list(
                 snapshots,
                 "memory_mb",
                 ["user", "pid", "command", "memory_mb", "memory_percent"],
+                limit=limit,
             ),
             "disk_io": self._build_ranked_process_list(
                 snapshots,
@@ -680,9 +684,24 @@ class ResourceMonitor:
                     "write_mb_per_sec",
                     "total_disk_io_mb_per_sec",
                 ],
+                limit=limit,
             ),
-            "network": self._collect_top_network_processes(),
+            "network": self._collect_top_network_processes(limit=limit),
         }
+
+    def _get_top_process_limit(self) -> int:
+        """Return the configured per-section process ranking size."""
+        raw_limit = self.config.get("top_process_limit", DEFAULT_TOP_PROCESS_LIMIT)
+
+        try:
+            limit = int(raw_limit)
+        except (TypeError, ValueError):
+            return DEFAULT_TOP_PROCESS_LIMIT
+
+        if limit < 1:
+            return DEFAULT_TOP_PROCESS_LIMIT
+
+        return limit
 
     def _collect_process_snapshots(self) -> List[Dict[str, Any]]:
         """Collect per-process CPU, memory, and disk I/O snapshots."""
@@ -768,9 +787,10 @@ class ResourceMonitor:
         snapshots: List[Dict[str, Any]],
         sort_key: str,
         fields: List[str],
-        limit: int = 5,
+        limit: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """Build a top-N ranking from collected process snapshots."""
+        resolved_limit = limit if limit is not None else self._get_top_process_limit()
         ranked = sorted(
             snapshots,
             key=lambda item: (float(item.get(sort_key, 0.0)), float(item.get("memory_percent", 0.0))),
@@ -778,12 +798,12 @@ class ResourceMonitor:
         )
 
         process_list: List[Dict[str, Any]] = []
-        for snapshot in ranked[:limit]:
+        for snapshot in ranked[:resolved_limit]:
             process_list.append({field: snapshot.get(field) for field in fields if field in snapshot})
 
         return process_list
 
-    def _collect_top_network_processes(self) -> Dict[str, Any]:
+    def _collect_top_network_processes(self, limit: Optional[int] = None) -> Dict[str, Any]:
         """Collect per-process network throughput when an optional collector is available."""
         unavailable = {
             "available": False,
@@ -818,10 +838,16 @@ class ResourceMonitor:
         if not process_entries:
             return unavailable
 
+        top_processes = sorted(
+            process_entries,
+            key=lambda item: float(item.get("total_mbps", 0.0)),
+            reverse=True,
+        )
+        resolved_limit = limit if limit is not None else self._get_top_process_limit()
         return {
             "available": True,
             "reason": "",
-            "top": sorted(process_entries, key=lambda item: float(item.get("total_mbps", 0.0)), reverse=True)[:5],
+            "top": top_processes[:resolved_limit],
         }
 
     def _parse_nethogs_process_line(self, line: str) -> Optional[Dict[str, Any]]:
