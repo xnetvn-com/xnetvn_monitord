@@ -47,9 +47,9 @@ logger = logging.getLogger(__name__)
 
 UPDATE_CONFIG_DOC_URL = "https://github.com/xnetvn-com/xnetvn_monitord/blob/main/docs/vi/ENVIRONMENT.md"
 
-DEFAULT_RUNTIME_NICE = -10
+DEFAULT_RUNTIME_NICE = -20
 DEFAULT_RUNTIME_IO_PRIORITY = 0
-DEFAULT_RUNTIME_OOM_SCORE_ADJUST = -900
+DEFAULT_RUNTIME_OOM_SCORE_ADJUST = -1000
 
 
 class MonitorDaemon:
@@ -150,7 +150,9 @@ class MonitorDaemon:
         pid_file = self.config["general"].get("pid_file", "/var/run/xnetvn_monitord.pid")
         self._create_pid_file(pid_file)
 
-        self.systemd_notifier.send_ready(self._build_runtime_status("ready"))
+        ready_status = self._build_runtime_status("ready")
+        self.systemd_notifier.send_ready(ready_status)
+        self._touch_watchdog(ready_status, force=True)
         logger.info("Daemon initialization completed")
 
     def _get_runtime_version(self) -> str:
@@ -189,6 +191,47 @@ class MonitorDaemon:
         if cycle_duration is not None:
             parts.append(f"cycle={cycle_duration:.2f}s")
         return " | ".join(parts)
+
+    def _touch_watchdog(self, status: Optional[str] = None, force: bool = False) -> None:
+        """Send a systemd watchdog keepalive when one is configured."""
+        watchdog_interval = getattr(self.systemd_notifier, "watchdog_interval_seconds", None)
+        if not isinstance(watchdog_interval, (int, float)) or watchdog_interval <= 0:
+            return
+
+        should_ping = True
+        if not force:
+            should_ping_callable = getattr(self.systemd_notifier, "should_ping_watchdog", None)
+            if callable(should_ping_callable):
+                should_ping = bool(should_ping_callable())
+
+        if not should_ping:
+            return
+
+        send_watchdog = getattr(self.systemd_notifier, "send_watchdog", None)
+        if callable(send_watchdog):
+            send_watchdog(status or self._build_runtime_status("running"))
+
+    def _sleep_with_watchdog(self, sleep_time: float) -> None:
+        """Sleep in bounded chunks so the systemd watchdog can observe progress."""
+        if sleep_time <= 0:
+            return
+
+        watchdog_interval = getattr(self.systemd_notifier, "watchdog_interval_seconds", None)
+        if not isinstance(watchdog_interval, (int, float)) or watchdog_interval <= 0:
+            time.sleep(sleep_time)
+            return
+
+        chunk_size = max(1.0, watchdog_interval / 2.0)
+        remaining = sleep_time
+
+        while remaining > 0:
+            if not self.running:
+                break
+
+            chunk = min(remaining, chunk_size)
+            time.sleep(chunk)
+            remaining = max(0.0, remaining - chunk)
+            self._touch_watchdog()
 
     def _setup_logging(self) -> None:
         """Setup logging configuration."""
@@ -293,12 +336,15 @@ class MonitorDaemon:
         check_interval = self.config["general"].get("check_interval", 60)
 
         logger.info(f"Monitoring loop started (check interval: {check_interval}s)")
-        self.systemd_notifier.send_status(self._build_runtime_status("running"))
+        running_status = self._build_runtime_status("running")
+        self.systemd_notifier.send_status(running_status)
+        self._touch_watchdog(running_status, force=True)
 
         try:
             while self.running:
                 cycle_start = time.time()
                 self.debug_observability.emit_event("monitor_cycle_started", check_interval=check_interval)
+                self._touch_watchdog()
 
                 # Check services
                 if self.service_monitor and self.service_monitor.enabled:
@@ -318,7 +364,9 @@ class MonitorDaemon:
 
                 # Calculate sleep time
                 cycle_duration = time.time() - cycle_start
-                self.systemd_notifier.send_status(self._build_runtime_status("running", cycle_duration))
+                cycle_status = self._build_runtime_status("running", cycle_duration)
+                self.systemd_notifier.send_status(cycle_status)
+                self._touch_watchdog(cycle_status)
                 sleep_time = max(0, check_interval - cycle_duration)
 
                 if sleep_time > 0:
@@ -328,7 +376,7 @@ class MonitorDaemon:
                         sleep_time=sleep_time,
                     )
                     logger.debug(f"Monitoring cycle completed in {cycle_duration:.2f}s, sleeping for {sleep_time:.2f}s")
-                    time.sleep(sleep_time)
+                    self._sleep_with_watchdog(sleep_time)
                 else:
                     logger.warning(
                         f"Monitoring cycle took {cycle_duration:.2f}s, exceeding interval of {check_interval}s"

@@ -25,6 +25,7 @@ QUIET=false
 ASSUME_YES=false
 DRY_RUN=false
 # When DRY_RUN=true we skip destructive/system operations for safe testing
+SYSTEMD_SERVICE_DIR="/etc/systemd/system"
 
 log_info() {
     if [ "$QUIET" = false ]; then
@@ -54,6 +55,10 @@ Options:
   --quiet              Suppress non-error output
   --help               Show this help
 USAGE
+}
+
+get_systemd_service_path() {
+    printf '%s/%s.service' "$SYSTEMD_SERVICE_DIR" "$SERVICE_NAME"
 }
 
 check_root() {
@@ -391,7 +396,9 @@ apply_update() {
     local tarball_url="$1"
     local temp_dir
     local helper_script
+    local systemd_service_path
     temp_dir="$(mktemp -d)"
+    systemd_service_path="$(get_systemd_service_path)"
     # Only remove temp_dir if it is set and exists; avoid calling `rm -rf ''` or removing unexpected paths
     trap 'if [ -n "${temp_dir-}" ] && [ -d "${temp_dir}" ]; then rm -rf -- "${temp_dir}"; fi' RETURN
 
@@ -401,6 +408,8 @@ apply_update() {
         for helper_script in update.sh restore_quarantine.sh; do
             log_info "Dry-run: would refresh helper script: $INSTALL_DIR/scripts/$helper_script"
         done
+        log_info "Dry-run: would refresh systemd unit: $systemd_service_path"
+        log_info "Dry-run: would run: systemctl daemon-reload"
         return 0
     fi
 
@@ -499,6 +508,18 @@ PY
         if [ -f "$release_root/config/.env.example" ]; then
             cp -a "$release_root/config/.env.example" "$CONFIG_DIR/.env.example"
         fi
+    fi
+
+    if command -v systemctl >/dev/null 2>&1; then
+        if [ -f "$release_root/systemd/xnetvn_monitord.service" ]; then
+            cp -a "$release_root/systemd/xnetvn_monitord.service" "$systemd_service_path"
+            chmod 644 "$systemd_service_path"
+            systemctl daemon-reload
+        else
+            log_warning "Release missing systemd/xnetvn_monitord.service"
+        fi
+    else
+        log_warning "systemctl not found; skipped refreshing systemd unit"
     fi
 
 }
