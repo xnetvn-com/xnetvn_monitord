@@ -4,8 +4,9 @@ Documentation=https://github.com/xntmkt/servers
 After=network.target
 
 [Service]
-Type=simple
+Type=notify
 NotifyAccess=main
+WatchdogSec=5min
 User=root
 Group=root
 EnvironmentFile=-/etc/xnetvn_monitord/xnetvn_monitord.env
@@ -25,12 +26,14 @@ ProtectSystem=full
 ProtectHome=false
 
 # Scheduling priority so monitoring and recovery stay responsive under load.
-Nice=-10
-OOMScoreAdjust=-900
+Nice=-20
+OOMScoreAdjust=-1000
 IOSchedulingClass=best-effort
 IOSchedulingPriority=0
 CPUWeight=10000
 IOWeight=10000
+MemoryLow=64M
+MemoryMin=32M
 
 # Resource limits
 LimitNOFILE=65536

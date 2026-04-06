@@ -21,6 +21,7 @@ import shutil
 import tarfile
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock
 
 from xnetvn_monitord.utils.update_checker import (
     ReleaseInfo,
@@ -244,6 +245,10 @@ class TestUpdateCheckerApplyUpdate:
         (release_scripts / "update.sh").write_text("#!/usr/bin/env bash\necho new updater\n")
         (release_scripts / "restore_quarantine.sh").write_text("#!/usr/bin/env bash\necho new restore\n")
 
+        release_systemd_dir = package_root / "systemd"
+        release_systemd_dir.mkdir(parents=True)
+        (release_systemd_dir / "xnetvn_monitord.service").write_text("[Unit]\nDescription=new unit\n")
+
         release_config = package_root / "config"
         release_config.mkdir(parents=True)
         (release_config / "main.example.yaml").write_text("new example")
@@ -266,6 +271,11 @@ class TestUpdateCheckerApplyUpdate:
             "xnetvn_monitord.utils.update_checker.download_url_to_file",
             _fake_download,
         )
+        fake_systemd_dir = tmp_path / "systemd-units"
+        monkeypatch.setattr("xnetvn_monitord.utils.update_checker.SYSTEMD_UNIT_DIR", fake_systemd_dir)
+        monkeypatch.setenv("XNETVN_SERVICE_MANAGER", "systemd")
+        daemon_reload = MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr=""))
+        monkeypatch.setattr("xnetvn_monitord.utils.update_checker.subprocess.run", daemon_reload)
 
         state_file = tmp_path / "state.json"
         checker = UpdateChecker(
@@ -278,6 +288,13 @@ class TestUpdateCheckerApplyUpdate:
         assert (install_dir / "xnetvn_monitord" / "new.txt").read_text() == "new"
         assert (scripts_dir / "update.sh").read_text() == "#!/usr/bin/env bash\necho new updater\n"
         assert (scripts_dir / "restore_quarantine.sh").read_text() == "#!/usr/bin/env bash\necho new restore\n"
+        assert (fake_systemd_dir / "xnetvn_monitord.service").read_text() == "[Unit]\nDescription=new unit\n"
+        daemon_reload.assert_called_once_with(
+            ["systemctl", "daemon-reload"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
         assert (config_dir / "main.example.yaml").read_text() == "new example"
         assert (config_dir / ".env.example").read_text() == "new env"
         assert (config_dir / "main.yaml").read_text() == "user-config"

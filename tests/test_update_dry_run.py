@@ -35,4 +35,6 @@ def test_update_dry_run(tmp_path):
     assert "Dry-run: would create backup directory" in proc.stdout
     assert "Dry-run: would download release tarball" in proc.stdout
     assert "Dry-run: would refresh helper script" in proc.stdout
+    assert "Dry-run: would refresh systemd unit" in proc.stdout
+    assert "Dry-run: would run: systemctl daemon-reload" in proc.stdout
     assert "Update applied successfully" in proc.stdout

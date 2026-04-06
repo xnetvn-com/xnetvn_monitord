@@ -21,6 +21,7 @@ import logging
 import os
 import re
 import shutil
+import subprocess
 import tarfile
 import tempfile
 import time
@@ -41,6 +42,8 @@ from .network import (
 from .service_manager import ServiceManager
 
 logger = logging.getLogger(__name__)
+
+SYSTEMD_UNIT_DIR = Path("/etc/systemd/system")
 
 _VERSION_PATTERN = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$")
 
@@ -369,6 +372,42 @@ class UpdateChecker:
                 raise ValueError(f"Unsafe tar member path: {member.name}") from exc
             tar_handle.extract(member, path=target_dir)
 
+    def _refresh_systemd_unit(self, release_root: Path) -> None:
+        """Refresh the installed systemd unit from the release artifact when systemd is active."""
+        manager_override = os.environ.get("XNETVN_SERVICE_MANAGER")
+        service_manager = ServiceManager(manager_override)
+        if not service_manager.is_systemd:
+            return
+
+        release_unit = release_root / "systemd" / "xnetvn_monitord.service"
+        if not release_unit.exists():
+            logger.warning("Release missing systemd/xnetvn_monitord.service")
+            return
+
+        service_name = str(self.config.get("service_name", "xnetvn_monitord")).strip() or "xnetvn_monitord"
+        SYSTEMD_UNIT_DIR.mkdir(parents=True, exist_ok=True)
+        unit_path = SYSTEMD_UNIT_DIR / f"{service_name}.service"
+        shutil.copy2(release_unit, unit_path)
+
+        try:
+            result = subprocess.run(
+                ["systemctl", "daemon-reload"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            logger.warning("Failed to reload systemd daemon after refreshing %s: %s", unit_path, exc)
+            return
+
+        if result.returncode != 0:
+            output = (result.stderr or result.stdout or "").strip()
+            logger.warning(
+                "systemctl daemon-reload returned non-zero after refreshing %s: %s",
+                unit_path,
+                output or result.returncode,
+            )
+
     def apply_update(self, tarball_url: str) -> bool:
         """Download and apply update from GitHub tarball.
 
@@ -433,6 +472,8 @@ class UpdateChecker:
                             logger.warning("Release missing scripts/%s", script_name)
                 else:
                     logger.warning("Release missing scripts directory")
+
+                self._refresh_systemd_unit(release_root)
 
                 config_dir = self.install_dir / "config"
                 config_dir.mkdir(parents=True, exist_ok=True)

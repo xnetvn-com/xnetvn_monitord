@@ -161,10 +161,26 @@ class TestMonitorDaemonInitialization:
 
         daemon._apply_runtime_priority()
 
-        process_mock.nice.assert_called_once_with(-10)
+        process_mock.nice.assert_called_once_with(-20)
         process_mock.ionice.assert_called_once_with(daemon_module.psutil.IOPRIO_CLASS_BE, 0)
         open_mock.assert_called_once_with("/proc/self/oom_score_adj", "w", encoding="utf-8")
-        open_mock().write.assert_called_once_with("-900")
+        open_mock().write.assert_called_once_with("-1000")
+
+    def test_should_ping_watchdog_while_sleeping(self, mocker, tmp_path):
+        """Test daemon periodically pings systemd watchdog during long sleeps."""
+        daemon = MonitorDaemon("/tmp/config.yaml")
+        daemon.config = _build_minimal_config(tmp_path)
+        daemon.running = True
+        daemon.systemd_notifier = mocker.Mock()
+        daemon.systemd_notifier.watchdog_interval_seconds = 20.0
+
+        sleep_mock = mocker.patch("xnetvn_monitord.daemon.time.sleep")
+        touch_mock = mocker.patch.object(daemon, "_touch_watchdog")
+
+        daemon._sleep_with_watchdog(25.0)
+
+        assert sleep_mock.call_args_list == [mocker.call(10.0), mocker.call(10.0), mocker.call(5.0)]
+        assert touch_mock.call_count == 3
 
 
 class TestMonitorDaemonLogging:
