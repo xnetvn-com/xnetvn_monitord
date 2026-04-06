@@ -19,9 +19,9 @@ from __future__ import annotations
 import json
 import shutil
 import tarfile
-from unittest.mock import MagicMock
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock
 
 from xnetvn_monitord.utils.update_checker import (
     ReleaseInfo,
