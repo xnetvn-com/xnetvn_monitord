@@ -28,7 +28,7 @@ flake8>=6.1.0                  # Style guide enforcement
 mypy>=1.5.0                    # Static type checker
 
 # Security Testing
-bandit>=1.7.5                  # Security issue scanner
+bandit>=1.9.4                  # Security issue scanner
 pip-audit>=2.10.0              # Dependency vulnerability scanner
 
 # Performance and Profiling
