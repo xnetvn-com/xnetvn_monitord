@@ -33,7 +33,7 @@ pip-audit>=2.10.0              # Dependency vulnerability scanner
 
 # Performance and Profiling
 memory-profiler>=0.61.0        # Memory usage profiling
-py-spy>=0.3.14                 # Sampling profiler
+py-spy>=0.4.2                 # Sampling profiler
 
 # Documentation
 sphinx>=7.1.0                  # Documentation generator
