@@ -23,7 +23,7 @@ faker>=19.0.0                  # Fake data generation
 # Code Quality and Linting
 pylint>=2.17.0                 # Python linter
 black>=23.7.0                  # Code formatter
-isort>=5.12.0                  # Import sorting
+isort>=8.0.1                  # Import sorting
 flake8>=6.1.0                  # Style guide enforcement
 mypy>=1.5.0                    # Static type checker
 
