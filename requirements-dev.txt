@@ -14,7 +14,7 @@ pytest-xdist>=3.3.0            # Parallel test execution
 pytest-asyncio>=0.21.0         # Async testing support
 
 # Mocking and Fixtures
-freezegun>=1.2.0               # Time/date mocking
+freezegun>=1.5.5               # Time/date mocking
 pytest-freezegun>=0.4.2        # Pytest plugin for freezegun
 responses>=0.23.0              # HTTP request mocking
 testfixtures>=7.1.0            # Additional test utilities
