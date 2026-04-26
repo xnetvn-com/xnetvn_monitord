@@ -6,7 +6,7 @@
 -r requirements.txt
 
 # Core Testing Framework
-pytest>=7.4.0
+pytest>=9.0.3
 pytest-cov>=4.1.0              # Coverage plugin
 pytest-mock>=3.11.0            # Mocking utilities
 pytest-timeout>=2.1.0          # Test timeouts
