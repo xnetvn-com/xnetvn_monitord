@@ -1,7 +1,7 @@
 # Requirements for xNetVN Monitor Daemon
 
 # Core dependencies
-PyYAML>=6.0
+PyYAML>=6.0.3
 psutil>=5.9.0
 
 # Proxy support (SOCKS5)
