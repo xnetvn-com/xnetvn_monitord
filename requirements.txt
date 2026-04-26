@@ -2,7 +2,7 @@
 
 # Core dependencies
 PyYAML>=6.0
-psutil>=5.9.0
+psutil>=7.2.2
 
 # Proxy support (SOCKS5)
 PySocks>=1.7.1
