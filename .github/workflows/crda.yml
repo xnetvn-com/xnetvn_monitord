@@ -94,7 +94,7 @@ jobs:
 
       - name: Check out repository
         if: steps.auth.outputs.enabled == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # *******************************************************************
       # Required: Instructions to setup project
